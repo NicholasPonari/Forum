@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabaseClient";
 import { ArrowBigUp, ArrowBigDown } from "lucide-react";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface VoteButtonsProps {
 	issueId: number;
@@ -25,6 +26,7 @@ export function VoteButtons({
 	onMemberRestricted,
 }: VoteButtonsProps) {
 	const { user, isMember } = useAuth();
+	const { t } = useTranslation();
 	const [upvotes, setUpvotes] = useState(initialUpvotes);
 	const [downvotes, setDownvotes] = useState(initialDownvotes);
 	const [userVote, setUserVote] = useState<1 | -1 | 0>(0);
@@ -35,7 +37,7 @@ export function VoteButtons({
 				onRequireVerification();
 				return;
 			}
-			toast("You must be logged in to vote.");
+			toast(t.vote.loginToVote);
 			return;
 		}
 		if (isMember) {
@@ -43,7 +45,7 @@ export function VoteButtons({
 				onMemberRestricted();
 				return;
 			}
-			toast("Members cannot vote. Become a verified resident to vote.");
+			toast(t.vote.membersCannotVote);
 			return;
 		}
 		if (userVote === value) return;
@@ -58,7 +60,7 @@ export function VoteButtons({
 			{ onConflict: "user_id,issue_id" }
 		);
 		if (error) {
-			toast("Could not submit vote.");
+			toast(t.vote.error);
 			return;
 		}
 		// Refetch upvote/downvote counts and user vote
@@ -93,7 +95,7 @@ export function VoteButtons({
 						: "text-gray-400 hover:text-orange-600 hover:bg-orange-50"
 				} disabled:opacity-60`}
 				onClick={() => vote(1)}
-				aria-label="Upvote"
+				aria-label={t.vote.upvote}
 			>
 				<ArrowBigUp className="w-4 h-4" />
 			</button>
@@ -118,7 +120,7 @@ export function VoteButtons({
 						: "text-gray-400 hover:text-blue-600 hover:bg-blue-50"
 				} disabled:opacity-60`}
 				onClick={() => vote(-1)}
-				aria-label="Downvote"
+				aria-label={t.vote.downvote}
 			>
 				<ArrowBigDown className="w-4 h-4" />
 			</button>

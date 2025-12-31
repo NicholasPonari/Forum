@@ -87,6 +87,7 @@ export interface Profile {
     role?: string; // 'Resident' | 'Politician' | 'Candidate'
     type?: string;
     verified?: boolean;
+    language?: 'en' | 'fr';
     created_at?: string;
     updated_at?: string;
     user_id?: string;
@@ -125,6 +126,7 @@ export interface UserProfile {
 	last_name?: string | null;
 	bio?: string | null;
 	website?: string | null;
+	language?: 'en' | 'fr' | null;
 }
 
 export interface ProfileWithHistory extends Profile {

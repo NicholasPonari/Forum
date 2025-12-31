@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/collapsible";
 import { UserDistrictInfo } from "@/lib/types/geo";
 import { useRepresentatives } from "@/hooks/use-representatives";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface RepresentativesInfoProps {
 	className?: string;
@@ -32,6 +33,7 @@ export function RepresentativesInfo({
 	className,
 	userDistricts,
 }: RepresentativesInfoProps) {
+	const { t } = useTranslation();
 	const { districtInfo, loading, user } = useRepresentatives(
 		userDistricts ?? null
 	);
@@ -53,10 +55,10 @@ export function RepresentativesInfo({
 				<CardContent className="text-center py-12 text-muted-foreground">
 					<User className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
 					<p className="text-sm font-medium text-foreground">
-						Sign in to see your representatives
+						{t.representatives.signInPrompt}
 					</p>
 					<p className="text-xs mt-1">
-						We&apos;ll show you who represents you at every level of government
+						{t.representatives.signInDesc}
 					</p>
 				</CardContent>
 			</Card>
@@ -76,10 +78,10 @@ export function RepresentativesInfo({
 				<CardContent className="text-center py-12 text-muted-foreground">
 					<MapPin className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
 					<p className="text-sm font-medium text-foreground">
-						Location not set
+						{t.civicMap.locationNotSet}
 					</p>
 					<p className="text-xs mt-1">
-						Update your profile with your address to see your representatives
+						{t.representatives.locationPrompt}
 					</p>
 				</CardContent>
 			</Card>
@@ -89,18 +91,18 @@ export function RepresentativesInfo({
 	const sections = [
 		{
 			key: "federal" as const,
-			label: "Federal",
-			role: "Member of Parliament",
+			label: t.nav.federal,
+			role: t.representatives.roles.mp,
 			icon: Building2,
 			districtName: districtInfo.federal.name,
 			politician: districtInfo.federal.politician,
 		},
 		{
 			key: "provincial" as const,
-			label: "Provincial",
+			label: t.nav.provincial,
 			role:
 				districtInfo.provincial.politician?.primary_role_en ||
-				"Provincial Representative",
+				t.representatives.roles.mp, // Fallback if needed, though usually dynamic
 			icon: Home,
 			districtName: districtInfo.provincial.name,
 			politician: districtInfo.provincial.politician,
@@ -109,8 +111,8 @@ export function RepresentativesInfo({
 			? [
 					{
 						key: "municipalCity" as const,
-						label: "City",
-						role: "Mayor",
+						label: t.representatives.roles.city,
+						role: t.representatives.roles.mayor,
 						icon: MapPin,
 						districtName: districtInfo.municipalCity.name,
 						politician: districtInfo.municipalCity.politician,
@@ -122,22 +124,22 @@ export function RepresentativesInfo({
 			label:
 				districtInfo.municipalCity.name &&
 				districtInfo.municipalCity.name.toLowerCase() === "montreal"
-					? "Borough"
+					? t.representatives.roles.borough
 					: districtInfo.municipalBorough.politician?.primary_role_en?.includes(
 							"Borough"
 					  )
-					? "Borough"
-					: "City",
+					? t.representatives.roles.borough
+					: t.representatives.roles.city,
 			role:
-				districtInfo.municipalBorough.politician?.primary_role_en || "Mayor",
+				districtInfo.municipalBorough.politician?.primary_role_en || t.representatives.roles.mayor,
 			icon: MapPin,
 			districtName: districtInfo.municipalBorough.name,
 			politician: districtInfo.municipalBorough.politician,
 		},
 		{
 			key: "municipalDistrict" as const,
-			label: "Borough District",
-			role: "City Councillor",
+			label: t.representatives.roles.boroughDistrict,
+			role: t.representatives.roles.councillor,
 			icon: MapPin,
 			districtName: districtInfo.municipalDistrict.name,
 			politician: districtInfo.municipalDistrict.politician,
@@ -158,7 +160,7 @@ export function RepresentativesInfo({
 			<div className="p-4 space-y-2">
 				<div className="px-1">
 					<h2 className="text-lg font-semibold tracking-tight">
-						My Elected Officials
+						{t.representatives.title}
 					</h2>
 				</div>
 
@@ -224,7 +226,7 @@ export function RepresentativesInfo({
 									</div>
 								) : (
 									<div className="text-sm text-muted-foreground italic py-1 text-center">
-										No representative found
+										{t.representatives.noRepFound}
 									</div>
 								)}
 							</div>
@@ -237,7 +239,7 @@ export function RepresentativesInfo({
 								<div className="h-8 px-3 bg-muted/30 border-b flex items-center justify-between gap-2">
 									<div className="flex items-center gap-2 text-sm font-medium">
 										<MapPin className="w-4 h-4 text-muted-foreground" />
-										<span>City Council</span>
+										<span>{t.representatives.cityCouncil}</span>
 									</div>
 									<Badge
 										variant="outline"
@@ -261,8 +263,8 @@ export function RepresentativesInfo({
 											>
 												<span>
 													{isVancouverCouncilOpen
-														? "Hide councillors"
-														: `Show councillors (${districtInfo.vancouverCouncil.councillors.length})`}
+														? t.representatives.hideCouncillors
+														: `${t.representatives.showCouncillors} (${districtInfo.vancouverCouncil.councillors.length})`}
 												</span>
 												<ChevronDown
 													className={cn(
@@ -310,7 +312,7 @@ export function RepresentativesInfo({
 																			>
 																				<a href={`mailto:${p.email}`}>
 																					<Mail className="w-3 h-3" />
-																					Email
+																					{t.common.email}
 																				</a>
 																			</Button>
 																		)}

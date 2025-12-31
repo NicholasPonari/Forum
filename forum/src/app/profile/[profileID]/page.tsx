@@ -25,11 +25,19 @@ import {
 	User,
 	FileText,
 	MessageSquare,
+	Settings as SettingsIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { formatTimeAgo } from "@/lib/timeUtils";
 import { ProfileDistricts } from "@/components/ProfileDistricts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 
 interface UserComment {
 	id: string;
@@ -81,7 +89,7 @@ async function fetchProfile(id: string): Promise<Profile | null> {
 	const { data, error } = await supabase
 		.from("profiles")
 		.select(
-			`id, created_at, username, first_name, last_name, bio, interests, issues_cared_about, bookmarks, location, website, avatar_url, type, verified`
+			`id, created_at, username, first_name, last_name, bio, interests, issues_cared_about, bookmarks, location, website, avatar_url, type, verified, language`
 		)
 		.eq("id", id)
 		.single();
@@ -118,6 +126,7 @@ export default function ProfilePage() {
 	const [userComments, setUserComments] = useState<UserComment[]>([]);
 	const [loadingPosts, setLoadingPosts] = useState(false);
 	const [loadingComments, setLoadingComments] = useState(false);
+	const [updatingLanguage, setUpdatingLanguage] = useState(false);
 
 	useEffect(() => {
 		const loadProfile = async () => {
@@ -454,6 +463,25 @@ export default function ProfilePage() {
 		}
 	};
 
+	const handleLanguageChange = async (value: string) => {
+		if (!profile) return;
+		setUpdatingLanguage(true);
+
+		const supabase = createClient();
+		const { error } = await supabase
+			.from("profiles")
+			.update({ language: value })
+			.eq("id", profile.id);
+
+		if (error) {
+			console.error("Error updating language:", error);
+			// You might want to show a toast or error message here
+		} else {
+			setProfile({ ...profile, language: value as "en" | "fr" });
+		}
+		setUpdatingLanguage(false);
+	};
+
 	if (loading) {
 		return (
 			<div className="min-h-screen bg-gray-50">
@@ -590,6 +618,39 @@ export default function ProfilePage() {
 						</div>
 					</CardContent>
 				</Card>
+
+				{/* Settings Section - Only visible to own profile */}
+				{isOwnProfile && (
+					<Card className="mb-8">
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2">
+								<SettingsIcon className="h-5 w-5" />
+								Settings
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<div className="max-w-xs">
+								<Label className="mb-2 block">Language</Label>
+								<Select
+									value={profile.language || "en"}
+									onValueChange={handleLanguageChange}
+									disabled={updatingLanguage}
+								>
+									<SelectTrigger>
+										<SelectValue placeholder="Select Language" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="en">English</SelectItem>
+										<SelectItem value="fr">French</SelectItem>
+									</SelectContent>
+								</Select>
+								<p className="text-sm text-muted-foreground mt-2">
+									Choose your preferred language for the interface.
+								</p>
+							</div>
+						</CardContent>
+					</Card>
+				)}
 
 				{/* Electoral Districts */}
 				{profile.id && (

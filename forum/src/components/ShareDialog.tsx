@@ -15,12 +15,14 @@ import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 import { Link2, Check } from "lucide-react";
 import { Issue } from "@/lib/types/db";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface ShareDialogProps {
 	issue: Issue;
 }
 
 export function ShareDialog({ issue }: ShareDialogProps) {
+	const { t } = useTranslation();
 	const [open, setOpen] = useState(false);
 	const [copied, setCopied] = useState(false);
 
@@ -31,7 +33,7 @@ export function ShareDialog({ issue }: ShareDialogProps) {
 			: "";
 
 	// Share text for social media
-	const shareText = `${issue.title} - Check out this post on our community forum!`;
+	const shareText = t.share.shareText.replace("{title}", issue.title);
 
 	const handleCopyLink = async () => {
 		try {
@@ -64,7 +66,7 @@ export function ShareDialog({ issue }: ShareDialogProps) {
 		// Copy the link and show a message
 		await handleCopyLink();
 		alert(
-			"Link copied! Open Instagram and paste the link in your story or post."
+			t.share.instagramAlert
 		);
 		setOpen(false);
 	};
@@ -78,14 +80,14 @@ export function ShareDialog({ issue }: ShareDialogProps) {
 					className="h-auto px-3 py-2 rounded-3xl text-black bg-gray-100 hover:bg-gray-200"
 				>
 					<PiShareFat className="w-4 h-4 mr-1" />
-					Share
+					{t.share.button}
 				</Button>
 			</DialogTrigger>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
-					<DialogTitle>Share this post</DialogTitle>
+					<DialogTitle>{t.share.title}</DialogTitle>
 					<DialogDescription>
-						Share this post with your friends and community
+						{t.share.description}
 					</DialogDescription>
 				</DialogHeader>
 				<div className="flex flex-col gap-3 py-4">
@@ -96,7 +98,7 @@ export function ShareDialog({ issue }: ShareDialogProps) {
 						onClick={handleFacebookShare}
 					>
 						<FaFacebook className="w-5 h-5 text-blue-600" />
-						<span>Share on Facebook</span>
+						<span>{t.share.facebook}</span>
 					</Button>
 
 					{/* Twitter/X Share */}
@@ -106,7 +108,7 @@ export function ShareDialog({ issue }: ShareDialogProps) {
 						onClick={handleTwitterShare}
 					>
 						<FaXTwitter className="w-5 h-5 text-black" />
-						<span>Share on X (Twitter)</span>
+						<span>{t.share.twitter}</span>
 					</Button>
 
 					{/* Instagram Share */}
@@ -116,7 +118,7 @@ export function ShareDialog({ issue }: ShareDialogProps) {
 						onClick={handleInstagramShare}
 					>
 						<FaInstagram className="w-5 h-5 text-pink-600" />
-						<span>Share on Instagram</span>
+						<span>{t.share.instagram}</span>
 					</Button>
 
 					{/* Copy Link */}
@@ -130,7 +132,7 @@ export function ShareDialog({ issue }: ShareDialogProps) {
 						) : (
 							<Link2 className="w-5 h-5 text-gray-600" />
 						)}
-						<span>{copied ? "Link copied!" : "Copy link"}</span>
+						<span>{copied ? t.share.copied : t.share.copyLink}</span>
 					</Button>
 				</div>
 			</DialogContent>

@@ -60,6 +60,7 @@ import { CollapsedNavItem, NavItem, LevelBadge } from "./district-nav/NavItems";
 import { NavSectionHeader } from "./district-nav/NavSectionHeader";
 import { DistrictNavSkeleton } from "./district-nav/DistrictNavSkeleton";
 import dynamic from "next/dynamic";
+import { useTranslation } from "@/hooks/use-translation";
 
 // Dynamically import MapDrawer to avoid SSR issues with Leaflet
 const MapDrawer = dynamic(
@@ -92,6 +93,7 @@ export function DistrictNav({
 }: DistrictNavProps) {
 	const pathname = usePathname();
 	const { user, loading } = useAuth();
+	const { t } = useTranslation();
 
 	// Only one section can be open at a time
 	const [openSection, setOpenSection] = useState<
@@ -169,7 +171,7 @@ export function DistrictNav({
 								</Button>
 							</TooltipTrigger>
 							<TooltipContent side="right" sideOffset={8}>
-								Expand sidebar
+								{t.nav.expandSidebar}
 							</TooltipContent>
 						</Tooltip>
 					</div>
@@ -178,31 +180,31 @@ export function DistrictNav({
 						<CollapsedNavItem
 							href="/"
 							icon={Home}
-							label="Home"
+							label={t.nav.home}
 							isActive={pathname === "/"}
 						/>
 						<CollapsedNavItem
 							href="/d/federal"
 							icon={Layers}
-							label="Federal"
+							label={t.nav.federal}
 							isActive={isPathActive("/d/federal")}
 						/>
 						<CollapsedNavItem
 							href="/d/provincial"
 							icon={Landmark}
-							label="Provincial"
+							label={t.nav.provincial}
 							isActive={isPathActive("/d/provincial")}
 						/>
 						<CollapsedNavItem
 							href="/d/municipal"
 							icon={MapPinned}
-							label="Municipal"
+							label={t.nav.municipal}
 							isActive={isPathActive("/d/municipal")}
 						/>
 						<CollapsedNavItem
 							href="/about"
 							icon={Compass}
-							label="About"
+							label={t.nav.about}
 							isActive={isPathActive("/about")}
 						/>
 					</div>
@@ -218,7 +220,7 @@ export function DistrictNav({
 			className={cn("relative flex flex-col h-full bg-background", className)}
 		>
 			{/* Home */}
-			<NavItem href="/" icon={Home} label="Home" isActive={pathname === "/"} />
+			<NavItem href="/" icon={Home} label={t.nav.home} isActive={pathname === "/"} />
 			{/* Header with collapse toggle */}
 			{onCollapsedChange && (
 				<div className="relative flex items-center justify-end px-2 border-b shrink-0">
@@ -242,7 +244,7 @@ export function DistrictNav({
 						<CollapsibleTrigger asChild>
 							<NavSectionHeader
 								icon={Layers}
-								label="Issues"
+								label={t.nav.issues}
 								isOpen={openSection === "issues"}
 								onToggle={() =>
 									setOpenSection(openSection === "issues" ? null : "issues")
@@ -260,13 +262,13 @@ export function DistrictNav({
 								>
 									<TabsList className="grid grid-cols-3 h-8">
 										<TabsTrigger value="federal" className="text-xs">
-											Federal
+											{t.nav.federal}
 										</TabsTrigger>
 										<TabsTrigger value="provincial" className="text-xs">
-											Provincial
+											{t.nav.provincial}
 										</TabsTrigger>
 										<TabsTrigger value="municipal" className="text-xs">
-											Municipal
+											{t.nav.municipal}
 										</TabsTrigger>
 									</TabsList>
 									<TabsContent value="federal" className="mt-2 space-y-1">
@@ -275,7 +277,7 @@ export function DistrictNav({
 												key={topic.id}
 												href={`/issues/${topic.id}?level=federal`}
 												icon={topic.icon}
-												label={topic.label}
+												label={t.topics[topic.id as keyof typeof t.topics] || topic.label}
 												isActive={isPathActive(`/issues/${topic.id}`)}
 												indent
 											/>
@@ -285,7 +287,7 @@ export function DistrictNav({
 										<div className="px-2">
 											<div className="flex items-center justify-between mb-2">
 												<p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-													Province
+													{t.places.province}
 												</p>
 											</div>
 											<Select
@@ -294,11 +296,11 @@ export function DistrictNav({
 											>
 												<SelectTrigger className="h-8 text-xs">
 													<SelectValue
-														placeholder={userProvince || "All Provinces"}
+														placeholder={userProvince || t.places.allProvinces}
 													/>
 												</SelectTrigger>
 												<SelectContent>
-													<SelectItem value="all">All Provinces</SelectItem>
+													<SelectItem value="all">{t.places.allProvinces}</SelectItem>
 													{PROVINCES.map((p) => (
 														<SelectItem key={p.code} value={p.code}>
 															{p.name}
@@ -325,7 +327,7 @@ export function DistrictNav({
 													key={topic.id}
 													href={`/issues/${topic.id}?level=provincial${provinceParam}`}
 													icon={topic.icon}
-													label={topic.label}
+													label={t.topics[topic.id as keyof typeof t.topics] || topic.label}
 													isActive={isPathActive(`/issues/${topic.id}`)}
 													indent
 												/>
@@ -336,11 +338,11 @@ export function DistrictNav({
 										<div className="px-2">
 											<div className="flex items-center justify-between">
 												<p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-													City
+													{t.places.city}
 												</p>
 											</div>
 											<p className="text-xs text-foreground mt-1">
-												{userCity || "Choose a city in Places"}
+												{userCity || t.places.chooseCity}
 											</p>
 										</div>
 										{TOPICS_LIST.map((topic) => {
@@ -352,7 +354,7 @@ export function DistrictNav({
 													key={topic.id}
 													href={`/issues/${topic.id}?level=municipal${cityParam}`}
 													icon={topic.icon}
-													label={topic.label}
+													label={t.topics[topic.id as keyof typeof t.topics] || topic.label}
 													isActive={isPathActive(`/issues/${topic.id}`)}
 													indent
 												/>
@@ -366,7 +368,7 @@ export function DistrictNav({
 									href="/issues"
 									className="flex items-center px-3 py-1.5 ml-6 text-xs text-primary hover:underline"
 								>
-									View all issues →
+									{t.nav.viewAllIssues} →
 								</Link>
 							</div>
 						</CollapsibleContent>
@@ -380,7 +382,7 @@ export function DistrictNav({
 						<CollapsibleTrigger asChild>
 							<NavSectionHeader
 								icon={MapPin}
-								label="Places"
+								label={t.nav.places}
 								isOpen={openSection === "places"}
 								onToggle={() =>
 									setOpenSection(openSection === "places" ? null : "places")
@@ -395,7 +397,7 @@ export function DistrictNav({
 										<Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
 										<Input
 											type="text"
-											placeholder="Search places..."
+											placeholder={t.places.searchPlaceholder}
 											value={placeSearch}
 											onChange={(e) => setPlaceSearch(e.target.value)}
 											className="h-8 pl-8 text-xs"
@@ -407,7 +409,7 @@ export function DistrictNav({
 								<NavItem
 									href="/d/federal"
 									icon={Globe}
-									label="Canada (Federal)"
+									label={t.places.canadaFederal}
 									isActive={isPathActive("/d/federal")}
 									indent
 								/>
@@ -415,7 +417,7 @@ export function DistrictNav({
 								{/* Province Quick Links */}
 								<div className="px-3 py-1">
 									<p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">
-										Provinces & Territories
+										{t.places.provincesTerritories}
 									</p>
 								</div>
 								{filteredProvinces.slice(0, 6).map((province) => (
@@ -436,14 +438,14 @@ export function DistrictNav({
 										href="/d/provincial"
 										className="flex items-center px-3 py-1.5 ml-6 text-xs text-primary hover:underline"
 									>
-										+{filteredProvinces.length - 6} more →
+										+{filteredProvinces.length - 6} {t.places.more} →
 									</Link>
 								)}
 
 								{/* Government Level Links */}
 								<div className="px-3 py-1 mt-2">
 									<p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">
-										By Government Level
+										{t.places.byGovLevel}
 									</p>
 								</div>
 								{GOVERNMENT_LEVELS.map(({ level, label, icon: Icon }) => (
@@ -451,7 +453,7 @@ export function DistrictNav({
 										key={level}
 										href={`/d/${level}`}
 										icon={Icon}
-										label={`All ${label} Districts`}
+										label={t.places.allDistricts.replace("{level}", label)}
 										isActive={isPathActive(`/d/${level}`)}
 										indent
 									/>
@@ -468,7 +470,7 @@ export function DistrictNav({
 						<CollapsibleTrigger asChild>
 							<NavSectionHeader
 								icon={Compass}
-								label="My Civic Map"
+								label={t.nav.myCivicMap}
 								isOpen={openSection === "myCivicMap"}
 								onToggle={() =>
 									setOpenSection(
@@ -480,7 +482,7 @@ export function DistrictNav({
 										? undefined
 										: hasUserLocation
 										? undefined
-										: "For Members"
+										: t.civicMap.forMembers
 								}
 							/>
 						</CollapsibleTrigger>
@@ -494,18 +496,18 @@ export function DistrictNav({
 									<div className="px-4 py-3 text-xs text-muted-foreground text-center">
 										<Users className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
 										<p className="font-medium text-foreground">
-											Sign in required
+											{t.civicMap.signInRequired}
 										</p>
-										<p className="mt-1">Sign in to see your civic map</p>
+										<p className="mt-1">{t.civicMap.signInPrompt}</p>
 									</div>
 								) : !hasUserLocation ? (
 									<div className="px-4 py-3 text-xs text-muted-foreground text-center">
 										<MapPin className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
 										<p className="font-medium text-foreground">
-											Location not set
+											{t.civicMap.locationNotSet}
 										</p>
 										<p className="mt-1">
-											Update your profile to see your districts
+											{t.civicMap.updateProfilePrompt}
 										</p>
 										<Button
 											variant="outline"
@@ -515,7 +517,7 @@ export function DistrictNav({
 										>
 											<Link href={`/profile/${user.id}`}>
 												<Navigation className="w-3 h-3 mr-1" />
-												Set Location
+												{t.civicMap.setLocation}
 											</Link>
 										</Button>
 									</div>
@@ -529,7 +531,7 @@ export function DistrictNav({
 											onClick={() => setMapDrawerOpen(true)}
 										>
 											<Map className="w-3.5 h-3.5 mr-2" />
-											View on Map
+											{t.common.viewOnMap}
 										</Button>
 
 										{/* My Federal Riding */}
@@ -538,7 +540,7 @@ export function DistrictNav({
 												<div className="flex items-center gap-2 px-3 py-1">
 													<LevelBadge level="federal" />
 													<span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-														My Federal Riding
+														{t.civicMap.myFederalRiding}
 													</span>
 												</div>
 												<NavItem
@@ -563,7 +565,7 @@ export function DistrictNav({
 												<div className="flex items-center gap-2 px-3 py-1">
 													<LevelBadge level="provincial" />
 													<span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-														My Provincial Riding
+														{t.civicMap.myProvincialRiding}
 													</span>
 												</div>
 												<NavItem
@@ -588,7 +590,7 @@ export function DistrictNav({
 												<div className="flex items-center gap-2 px-3 py-1">
 													<LevelBadge level="municipal" />
 													<span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-														My Borough
+														{t.civicMap.myBorough}
 													</span>
 												</div>
 												<NavItem
@@ -613,7 +615,7 @@ export function DistrictNav({
 												<div className="flex items-center gap-2 px-3 py-1">
 													<LevelBadge level="municipal" />
 													<span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-														My Ward
+														{t.civicMap.myWard}
 													</span>
 												</div>
 												<NavItem
@@ -700,7 +702,7 @@ export function DistrictNav({
 				<NavItem
 					href="/feedback"
 					icon={Lightbulb}
-					label="Submit a Feature Idea"
+					label={t.nav.submitIdea}
 					isActive={isPathActive("/feedback")}
 				/>
 			</div>

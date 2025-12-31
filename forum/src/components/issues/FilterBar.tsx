@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { Search, Building2, Home, MapPin, Globe } from "lucide-react";
 import {
 	Select,
@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { GovernmentLevel } from "@/lib/types/geo";
 import { SortOption } from "@/hooks/use-issue-filters";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface FilterBarProps {
 	// State
@@ -33,40 +34,6 @@ interface FilterBarProps {
 	onUserRoleChange: (role: string | null) => void;
 }
 
-const LEVEL_TABS: {
-	level: GovernmentLevel | null;
-	label: string;
-	shortLabel: string;
-	icon: React.ReactNode;
-}[] = [
-	{
-		level: null,
-		label: "All",
-		shortLabel: "All",
-		icon: <Globe className="w-4 h-4" />,
-	},
-	{
-		level: "federal",
-		label: "Federal",
-		shortLabel: "Fed",
-		icon: <Building2 className="w-4 h-4" />,
-	},
-	{
-		level: "provincial",
-		label: "Provincial",
-		shortLabel: "Prov",
-		icon: <Home className="w-4 h-4" />,
-	},
-	{
-		level: "municipal",
-		label: "Municipal",
-		shortLabel: "Muni",
-		icon: <MapPin className="w-4 h-4" />,
-	},
-];
-
-const USER_ROLES = ["Resident", "Politician", "Candidate"];
-
 export function FilterBar({
 	governmentLevel,
 	searchQuery,
@@ -83,10 +50,55 @@ export function FilterBar({
 	onTypeChange,
 	onUserRoleChange,
 }: FilterBarProps) {
+	const { t } = useTranslation();
 	const [isFilterSticky, setIsFilterSticky] = useState(false);
 	const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 	const filterBarRef = useRef<HTMLDivElement>(null);
 	const filterPlaceholderRef = useRef<HTMLDivElement>(null);
+
+	const levelTabs: {
+		level: GovernmentLevel | null;
+		label: string;
+		shortLabel: string;
+		icon: React.ReactNode;
+	}[] = useMemo(
+		() => [
+			{
+				level: null,
+				label: t.filter.all,
+				shortLabel: t.filter.all,
+				icon: <Globe className="w-4 h-4" />,
+			},
+			{
+				level: "federal",
+				label: t.nav.federal,
+				shortLabel: t.filter.fedShort,
+				icon: <Building2 className="w-4 h-4" />,
+			},
+			{
+				level: "provincial",
+				label: t.nav.provincial,
+				shortLabel: t.filter.provShort,
+				icon: <Home className="w-4 h-4" />,
+			},
+			{
+				level: "municipal",
+				label: t.nav.municipal,
+				shortLabel: t.filter.muniShort,
+				icon: <MapPin className="w-4 h-4" />,
+			},
+		],
+		[t]
+	);
+
+	const userRoles = useMemo(
+		() => [
+			{ value: "Resident", label: t.filter.resident },
+			{ value: "Politician", label: t.filter.politician },
+			{ value: "Candidate", label: t.filter.candidate },
+		],
+		[t]
+	);
 
 	// Track filter bar sticky behavior
 	useEffect(() => {
@@ -113,7 +125,7 @@ export function FilterBar({
 		<>
 			{/* Desktop: Level Tabs */}
 			<div className="hidden md:flex items-center gap-2 mb-4">
-				{LEVEL_TABS.map((tab) => (
+				{levelTabs.map((tab) => (
 					<button
 						key={tab.level ?? "all"}
 						onClick={() => onLevelChange(tab.level)}
@@ -134,7 +146,7 @@ export function FilterBar({
 				<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
 				<Input
 					type="text"
-					placeholder="Search by title, description, address, or username..."
+					placeholder={t.filter.searchPlaceholder}
 					value={searchQuery}
 					onChange={(e) => onSearchChange(e.target.value)}
 					className="pl-10 rounded-xl"
@@ -149,12 +161,14 @@ export function FilterBar({
 					onValueChange={(value) => onSortChange(value as SortOption)}
 				>
 					<SelectTrigger className="w-[180px] rounded-xl">
-						<SelectValue placeholder="Sort By" />
+						<SelectValue placeholder={t.filter.sortBy} />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="new">New</SelectItem>
-						<SelectItem value="popular">Popular</SelectItem>
-						<SelectItem value="controversial">Controversial</SelectItem>
+						<SelectItem value="new">{t.filter.sortNew}</SelectItem>
+						<SelectItem value="popular">{t.filter.sortPopular}</SelectItem>
+						<SelectItem value="controversial">
+							{t.filter.sortControversial}
+						</SelectItem>
 					</SelectContent>
 				</Select>
 				{/* District Filter - Dropdown (only when level is selected) */}
@@ -166,10 +180,10 @@ export function FilterBar({
 						}
 					>
 						<SelectTrigger className="w-[180px] rounded-xl">
-							<SelectValue placeholder="District" />
+							<SelectValue placeholder={t.filter.district} />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="all">All Districts</SelectItem>
+							<SelectItem value="all">{t.filter.allDistricts}</SelectItem>
 							{availableDistricts.map((district) => (
 								<SelectItem key={district} value={district}>
 									{district}
@@ -187,13 +201,13 @@ export function FilterBar({
 					}
 				>
 					<SelectTrigger className="w-[180px] rounded-xl">
-						<SelectValue placeholder="Type" />
+						<SelectValue placeholder={t.filter.type} />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="all">All Types</SelectItem>
+						<SelectItem value="all">{t.filter.allTypes}</SelectItem>
 						{availableTypes.map((type) => (
 							<SelectItem key={type} value={type} className="capitalize">
-								{type}
+								{t.issueTypes[type as keyof typeof t.issueTypes] || type}
 							</SelectItem>
 						))}
 					</SelectContent>
@@ -207,13 +221,13 @@ export function FilterBar({
 					}
 				>
 					<SelectTrigger className="w-[180px] rounded-xl">
-						<SelectValue placeholder="User Role" />
+						<SelectValue placeholder={t.filter.userRole} />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="all">All Users</SelectItem>
-						{USER_ROLES.map((role) => (
-							<SelectItem key={role} value={role}>
-								{role}
+						<SelectItem value="all">{t.filter.allUsers}</SelectItem>
+						{userRoles.map((role) => (
+							<SelectItem key={role.value} value={role.value}>
+								{role.label}
 							</SelectItem>
 						))}
 					</SelectContent>
@@ -222,7 +236,7 @@ export function FilterBar({
 
 			{/* Mobile: Level Tabs */}
 			<div className="md:hidden flex items-center gap-1 mb-3 overflow-x-auto scrollbar-hide px-1">
-				{LEVEL_TABS.map((tab) => (
+				{levelTabs.map((tab) => (
 					<button
 						key={tab.level ?? "all"}
 						onClick={() => onLevelChange(tab.level)}
@@ -277,9 +291,11 @@ export function FilterBar({
 								<SelectValue placeholder="Sort" />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="new">New</SelectItem>
-								<SelectItem value="popular">Popular</SelectItem>
-								<SelectItem value="controversial">Controversial</SelectItem>
+								<SelectItem value="new">{t.filter.sortNew}</SelectItem>
+								<SelectItem value="popular">{t.filter.sortPopular}</SelectItem>
+								<SelectItem value="controversial">
+									{t.filter.sortControversial}
+								</SelectItem>
 							</SelectContent>
 						</Select>
 
@@ -292,10 +308,10 @@ export function FilterBar({
 								}
 							>
 								<SelectTrigger className="border-0 bg-transparent text-xs font-medium text-white hover:bg-gray-800 h-auto py-2 px-1 flex-1 min-w-0 gap-1 [&>svg]:text-gray-400 [&>svg]:opacity-100">
-									<SelectValue placeholder="District" />
+									<SelectValue placeholder={t.filter.district} />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="all">All Districts</SelectItem>
+									<SelectItem value="all">{t.filter.allDistricts}</SelectItem>
 									{availableDistricts.map((district) => (
 										<SelectItem key={district} value={district}>
 											{district}
@@ -313,13 +329,13 @@ export function FilterBar({
 							}
 						>
 							<SelectTrigger className="border-0 bg-transparent text-xs font-medium text-white hover:bg-gray-800 h-auto py-2 px-1 flex-1 min-w-0 gap-1 [&>svg]:text-gray-400 [&>svg]:opacity-100">
-								<SelectValue placeholder="Type" />
+								<SelectValue placeholder={t.filter.type} />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="all">All Types</SelectItem>
+								<SelectItem value="all">{t.filter.allTypes}</SelectItem>
 								{availableTypes.map((type) => (
 									<SelectItem key={type} value={type} className="capitalize">
-										{type}
+										{t.issueTypes[type as keyof typeof t.issueTypes] || type}
 									</SelectItem>
 								))}
 							</SelectContent>
@@ -337,7 +353,7 @@ export function FilterBar({
 						<div className="px-1">
 							<Input
 								type="text"
-								placeholder="Search by title, description, address..."
+								placeholder={t.filter.searchPlaceholder}
 								value={searchQuery}
 								onChange={(e) => onSearchChange(e.target.value)}
 								className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-gray-600"

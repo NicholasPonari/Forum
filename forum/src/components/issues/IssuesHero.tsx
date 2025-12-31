@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface IssuesHeroProps {
 	startLogoRef: React.RefObject<HTMLDivElement | null>;
@@ -11,6 +12,7 @@ interface IssuesHeroProps {
 
 export function IssuesHero({ startLogoRef, motionStyle }: IssuesHeroProps) {
 	const { user } = useAuth();
+	const { t } = useTranslation();
 
 	return (
 		<>
@@ -45,13 +47,13 @@ export function IssuesHero({ startLogoRef, motionStyle }: IssuesHeroProps) {
 			</h1>
 			<div className="flex flex-col items-center mb-10">
 				<p className="text-lg font-semibold text-center leading-6.5">
-					Politics don&apos;t belong on social media
+					{t.hero.tagline1}
 				</p>
 				<p className="text-lg font-semibold text-center leading-6.5">
-					No Bots, No Fake Accounts, No BS.
+					{t.hero.tagline2}
 				</p>
 				<p className="text-lg font-semibold text-center leading-6.5">
-					Post content with verified residents only.
+					{t.hero.tagline3}
 				</p>
 			</div>
 
@@ -59,12 +61,12 @@ export function IssuesHero({ startLogoRef, motionStyle }: IssuesHeroProps) {
 				<div className="flex items-center justify-center mb-9 mt-9">
 					<Link href="/signup">
 						<Button className="mr-4 bg-primary hover:bg-primary/80 text-white rounded-md">
-							Join the Community
+							{t.hero.join}
 						</Button>
 					</Link>
 					<Link href="/about">
 						<Button className="bg-white border-primary border-2 hover:border-primary hover:bg-primary/80 text-primary rounded-md">
-							Learn More
+							{t.hero.learnMore}
 						</Button>
 					</Link>
 				</div>

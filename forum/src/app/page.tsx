@@ -19,8 +19,10 @@ import { Menu, Users } from "lucide-react";
 import { useUserDistricts } from "@/hooks/use-user-districts";
 import { useIssues } from "@/hooks/use-issues";
 import { useScroll, useTransform } from "framer-motion";
+import { useTranslation } from "@/hooks/use-translation";
 
 export default function HomePage() {
+	const { t } = useTranslation();
 	const {
 		issues,
 		votes,
@@ -128,7 +130,7 @@ export default function HomePage() {
 								</SheetTrigger>
 								<SheetContent side="right" className="w-80 p-0">
 									<SheetHeader className="border-b px-4 py-3">
-										<SheetTitle>Your Representatives</SheetTitle>
+										<SheetTitle>{t.nav.representatives}</SheetTitle>
 									</SheetHeader>
 									<RepresentativesInfo
 										className="h-[calc(100vh-4rem)]"

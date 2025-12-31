@@ -24,6 +24,7 @@ import {
 	DialogDescription,
 	DialogFooter,
 } from "./ui/dialog";
+import { useTranslation } from "@/hooks/use-translation";
 
 export function IssueCard({
 	issue,
@@ -38,6 +39,7 @@ export function IssueCard({
 }) {
 	const router = useRouter();
 	const { user, profile, refreshProfile } = useAuth();
+	const { t } = useTranslation();
 	const [isBookmarked, setIsBookmarked] = useState(false);
 	const [isBookmarking, setIsBookmarking] = useState(false);
 	const [showVerifyDialog, setShowVerifyDialog] = useState(false);
@@ -122,19 +124,19 @@ export function IssueCard({
 									</Link>
 								) : (
 									<span className="font-semibold text-sm text-gray-900">
-										Anonymous
+										{t.issueCard.anonymous}
 									</span>
 								)}
 								<span className="text-xs text-gray-400">•</span>
 								<span className="text-xs text-gray-500 whitespace-nowrap">
-									{formatTimeAgo(issue.created_at)}
+									{formatTimeAgo(issue.created_at, t.time)}
 								</span>
 							</div>
 
 							{/* User Location */}
 							{(issue.author_city || issue.author_province) && (
 								<div className="text-xs text-gray-500 truncate">
-									Resident of {issue.author_city}
+									{t.issueCard.residentOf} {issue.author_city}
 									{issue.author_city && issue.author_province ? ", " : ""}
 									{issue.author_province}
 								</div>
@@ -158,7 +160,7 @@ export function IssueCard({
 								)}
 							>
 								<Globe className="w-3 h-3 mr-1" />
-								{getLevelLabel(issue.government_level)}
+								{t.nav[issue.government_level] || getLevelLabel(issue.government_level)}
 							</Badge>
 						)}
 
@@ -167,7 +169,7 @@ export function IssueCard({
 								variant="outline"
 								className="text-xs px-2 py-0.5 h-6 text-gray-600 bg-gray-50/50"
 							>
-								{getTopicLabel(issue.topic)}
+								{t.topics[issue.topic as keyof typeof t.topics] || getTopicLabel(issue.topic)}
 							</Badge>
 						)}
 
@@ -317,11 +319,9 @@ export function IssueCard({
 				<Dialog open={showVerifyDialog} onOpenChange={setShowVerifyDialog}>
 					<DialogContent>
 						<DialogHeader>
-							<DialogTitle>Join Vox.Vote</DialogTitle>
+							<DialogTitle>{t.issueCard.joinTitle}</DialogTitle>
 							<DialogDescription>
-								To vote or bookmark issues, please create an account. You can
-								sign up as a community member or become a verified resident for
-								full access.
+								{t.issueCard.joinDesc}
 							</DialogDescription>
 						</DialogHeader>
 						<DialogFooter>
@@ -329,9 +329,9 @@ export function IssueCard({
 								variant="outline"
 								onClick={() => setShowVerifyDialog(false)}
 							>
-								Not now
+								{t.issueCard.notNow}
 							</Button>
-							<Button onClick={() => router.push("/signup")}>Sign Up</Button>
+							<Button onClick={() => router.push("/signup")}>{t.issueCard.signUp}</Button>
 						</DialogFooter>
 					</DialogContent>
 				</Dialog>
