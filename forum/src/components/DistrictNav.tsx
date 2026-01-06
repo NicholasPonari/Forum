@@ -20,6 +20,12 @@ import {
 	PanelLeftClose,
 	Map,
 	Users,
+	Megaphone,
+	CalendarDays,
+	MessageSquare,
+	FileText,
+	Mail,
+	Vote,
 	Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -314,12 +320,12 @@ export function DistrictNav({
 												selectedProvinceCode === "all"
 													? null
 													: PROVINCES.find(
-															(p) => p.code === selectedProvinceCode
-													  )?.name ?? null;
+														(p) => p.code === selectedProvinceCode
+													)?.name ?? null;
 											const provinceParam = selectedProvinceName
 												? `&province=${encodeURIComponent(
-														selectedProvinceName
-												  )}`
+													selectedProvinceName
+												)}`
 												: "";
 
 											return (
@@ -481,8 +487,8 @@ export function DistrictNav({
 									user && !userDistricts
 										? undefined
 										: hasUserLocation
-										? undefined
-										: t.civicMap.forMembers
+											? undefined
+											: t.civicMap.forMembers
 								}
 							/>
 						</CollapsibleTrigger>
@@ -640,60 +646,60 @@ export function DistrictNav({
 					</Collapsible>
 
 					{/* Actions - Civic Engagement */}
-					{/*<Collapsible
-            open={openSection === "actions"}
-            onOpenChange={(open) => setOpenSection(open ? "actions" : null)}
-          >
-            <CollapsibleTrigger asChild>
-              <NavSectionHeader
-                icon={Megaphone}
-                label="Actions"
-                isOpen={openSection === "actions"}
-                onToggle={() =>
-                  setOpenSection(openSection === "actions" ? null : "actions")
-                }
-              />
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="ml-2 mt-1 space-y-1">
-                <NavItem
-                  href="/actions/events"
-                  icon={CalendarDays}
-                  label="Upcoming Events"
-                  isActive={isPathActive("/actions/events")}
-                  indent
-                />
-                <NavItem
-                  href="/actions/consultations"
-                  icon={MessageSquare}
-                  label="Consultations"
-                  isActive={isPathActive("/actions/consultations")}
-                  indent
-                />
-                <NavItem
-                  href="/actions/petitions"
-                  icon={FileText}
-                  label="Petitions"
-                  isActive={isPathActive("/actions/petitions")}
-                  indent
-                />
-                <NavItem
-                  href="/actions/contact"
-                  icon={Mail}
-                  label="Contact Your Rep"
-                  isActive={isPathActive("/actions/contact")}
-                  indent
-                />
-                <NavItem
-                  href="/actions/elections"
-                  icon={Vote}
-                  label="Elections & Voting"
-                  isActive={isPathActive("/actions/elections")}
-                  indent
-                />
-              </div>
-            </CollapsibleContent>
-          </Collapsible>*/}
+					<Collapsible
+						open={openSection === "actions"}
+						onOpenChange={(open) => setOpenSection(open ? "actions" : null)}
+					>
+						<CollapsibleTrigger asChild>
+							<NavSectionHeader
+								icon={Megaphone}
+								label="Actions"
+								isOpen={openSection === "actions"}
+								onToggle={() =>
+									setOpenSection(openSection === "actions" ? null : "actions")
+								}
+							/>
+						</CollapsibleTrigger>
+						<CollapsibleContent>
+							<div className="ml-2 mt-1 space-y-1">
+								<NavItem
+									href="/actions/events"
+									icon={CalendarDays}
+									label="Upcoming Events"
+									isActive={isPathActive("/actions/events")}
+									indent
+								/>
+								<NavItem
+									href="/actions/consultations"
+									icon={MessageSquare}
+									label="Consultations"
+									isActive={isPathActive("/actions/consultations")}
+									indent
+								/>
+								<NavItem
+									href="/actions/petitions"
+									icon={FileText}
+									label="Petitions"
+									isActive={isPathActive("/actions/petitions")}
+									indent
+								/>
+								<NavItem
+									href="/actions/contact"
+									icon={Mail}
+									label="Contact Your Rep"
+									isActive={isPathActive("/actions/contact")}
+									indent
+								/>
+								<NavItem
+									href="/actions/elections"
+									icon={Vote}
+									label="Elections & Voting"
+									isActive={isPathActive("/actions/elections")}
+									indent
+								/>
+							</div>
+						</CollapsibleContent>
+					</Collapsible>
 				</div>
 			</ScrollArea>
 
@@ -714,7 +720,7 @@ export function DistrictNav({
 				issues={issues}
 				hoveredIssue={null}
 				voteBreakdown={voteBreakdown}
-				onIssueHover={() => {}}
+				onIssueHover={() => { }}
 				profileLocation={profileLocation}
 				districts={mapDistricts}
 			/>
