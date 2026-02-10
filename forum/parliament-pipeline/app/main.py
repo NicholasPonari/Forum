@@ -5,6 +5,7 @@ import re
 import time
 from datetime import date
 from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 
 # Create the app first before any heavy imports
@@ -15,10 +16,10 @@ app = FastAPI(
 )
 
 # Add CORS middleware for cross-origin requests from frontend
-from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://www.vox.vote", "https://vox.vote"],
+    # Allow vox.vote and any subdomain (e.g. www.vox.vote, preview deployments)
+    allow_origin_regex=r"^https://([a-z0-9-]+\\.)*vox\\.vote$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
