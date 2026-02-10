@@ -14,6 +14,16 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Add CORS middleware for cross-origin requests from frontend
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://www.vox.vote", "https://vox.vote"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
+
 # Add the simple healthcheck immediately
 @app.get("/health/simple")
 async def simple_health_check():
