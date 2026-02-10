@@ -20,6 +20,7 @@ import logging
 import re
 from datetime import date, datetime
 from typing import Any
+import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup, Tag
 
 import httpx
@@ -28,6 +29,9 @@ logger = logging.getLogger(__name__)
 
 # Publication Search base URL
 PUB_SEARCH_BASE = "https://www.ourcommons.ca/PublicationSearch/en/"
+
+# XML feed endpoint (documented under ourcommons.ca Open Data -> Publications Search)
+PUB_SEARCH_XML = "https://www.ourcommons.ca/Parliamentarians/en/PublicationSearch"
 
 
 def _build_http_client() -> httpx.Client:
@@ -88,27 +92,39 @@ def scrape_hansard_for_date(sitting_date: str, hansard_number: str | None = None
     topics_seen = set()
 
     with _build_http_client() as client:
-        # Warm-up request to establish cookies/session (some WAF setups block direct deep links)
+        xml_speeches: list[dict] = []
         try:
-            _ = _make_request(client, PUB_SEARCH_BASE, params={"PubType": "37"})
+            xml_speeches = _scrape_from_publication_search_xml(client, sitting_date)
         except Exception as e:
-            logger.warning(f"Hansard warm-up request failed: {e}")
+            logger.warning(f"XML Hansard scrape failed for {sitting_date}: {e}")
 
-        # Scrape each Order of Business section separately for better categorization
-        for oob_key, oob_label in ORDER_OF_BUSINESS.items():
+        if xml_speeches:
+            all_speeches = xml_speeches
+            for s in xml_speeches:
+                for t in s.get("topics", []):
+                    topics_seen.add(t["title"])
+        else:
+            # Warm-up request to establish cookies/session (some WAF setups block direct deep links)
             try:
-                section_speeches = _scrape_section(client, sitting_date, oob_key, oob_label)
-                all_speeches.extend(section_speeches)
-                for s in section_speeches:
-                    for t in s.get("topics", []):
-                        topics_seen.add(t["title"])
+                _ = _make_request(client, PUB_SEARCH_BASE, params={"PubType": "37"})
             except Exception as e:
-                logger.warning(f"Error scraping {oob_label} for {sitting_date}: {e}")
+                logger.warning(f"Hansard warm-up request failed: {e}")
 
-        # If section-based scrape got nothing, try a broad scrape
-        if not all_speeches:
-            logger.info(f"Section scrape empty, trying broad scrape for {sitting_date}")
-            all_speeches = _scrape_broad(client, sitting_date)
+            # Scrape each Order of Business section separately for better categorization
+            for oob_key, oob_label in ORDER_OF_BUSINESS.items():
+                try:
+                    section_speeches = _scrape_section(client, sitting_date, oob_key, oob_label)
+                    all_speeches.extend(section_speeches)
+                    for s in section_speeches:
+                        for t in s.get("topics", []):
+                            topics_seen.add(t["title"])
+                except Exception as e:
+                    logger.warning(f"Error scraping {oob_label} for {sitting_date}: {e}")
+
+            # If section-based scrape got nothing, try a broad scrape
+            if not all_speeches:
+                logger.info(f"Section scrape empty, trying broad scrape for {sitting_date}")
+                all_speeches = _scrape_broad(client, sitting_date)
 
     # Group speeches by topic/bill
     sections = _group_speeches_by_topic(all_speeches)
@@ -558,3 +574,117 @@ def _make_request(client: httpx.Client, url: str, params: dict[str, str] | None 
     response = client.get(url, params=params)
     response.raise_for_status()
     return response
+
+
+def _scrape_from_publication_search_xml(client: httpx.Client, sitting_date: str) -> list[dict]:
+    params = {
+        "PubType": "37",
+        "View": "L",
+        "xml": "1",
+        "RPP": "1000",
+        "Page": "1",
+        "ParlSes": "45-1",
+        "order": "chron",
+    }
+
+    response = _make_request(client, PUB_SEARCH_XML, params=params)
+    root = ET.fromstring(response.text)
+
+    speeches: list[dict] = []
+    order = 0
+
+    for pub in root.findall(".//Publication"):
+        pub_date = pub.attrib.get("Date", "")
+        hansard_num = pub.attrib.get("Title", "")
+        _ = hansard_num
+
+        for item in pub.findall(".//PublicationItem"):
+            item_date = item.attrib.get("Date", pub_date)
+            if item_date != sitting_date:
+                continue
+
+            person = item.find("Person")
+            person_id = person.attrib.get("Id") if person is not None else None
+
+            profile_url = ""
+            first_name = ""
+            last_name = ""
+            riding = ""
+            party = ""
+            province = ""
+            if person is not None:
+                profile_el = person.find("ProfileUrl")
+                if profile_el is not None and (profile_el.text or ""):
+                    profile_url = profile_el.text.strip()
+                    if profile_url.startswith("//"):
+                        profile_url = "https:" + profile_url
+                    elif profile_url.startswith("/"):
+                        profile_url = "https://www.ourcommons.ca" + profile_url
+
+                fn = person.find("FirstName")
+                ln = person.find("LastName")
+                first_name = (fn.text or "").strip() if fn is not None else ""
+                last_name = (ln.text or "").strip() if ln is not None else ""
+
+                riding_el = person.find("Constituency")
+                riding = (riding_el.text or "").strip() if riding_el is not None else ""
+
+                caucus_el = person.find("Caucus")
+                if caucus_el is not None:
+                    party = (caucus_el.attrib.get("Abbr") or "").strip()
+
+                province_el = person.find("Province")
+                if province_el is not None:
+                    province = (province_el.attrib.get("Code") or "").strip()
+
+            speaker_name = (f"{first_name} {last_name}").strip() or ""
+
+            oob_el = item.find("OrderOfBusiness")
+            section_label = (oob_el.text or "").strip() if oob_el is not None else "General"
+
+            subject_el = item.find("SubjectOfBusiness")
+            subject = (subject_el.text or "").strip() if subject_el is not None else ""
+
+            topics: list[dict] = []
+            if subject:
+                topics.append({"title": subject, "id": "", "url": ""})
+
+            hour = item.attrib.get("Hour")
+            minute = item.attrib.get("Minute")
+            time_str = ""
+            if hour is not None and minute is not None:
+                time_str = f"{int(hour):02d}:{int(minute):02d}"
+
+            page_ref = item.attrib.get("Page", "")
+
+            speech_text = ""
+            para_texts = item.findall(".//XmlContent//ParaText")
+            if para_texts:
+                parts: list[str] = []
+                for p in para_texts:
+                    text = "".join(p.itertext()).strip()
+                    if text:
+                        parts.append(re.sub(r"\s+", " ", text))
+                speech_text = "\n".join(parts).strip()
+
+            if not speaker_name or not speech_text:
+                continue
+
+            speeches.append({
+                "speaker_name": speaker_name,
+                "riding": riding,
+                "member_id": person_id,
+                "member_url": profile_url,
+                "party": party,
+                "province": province,
+                "date": item_date,
+                "time": time_str,
+                "page_ref": page_ref,
+                "speech_text": speech_text,
+                "topics": topics,
+                "section": section_label or "General",
+                "order": order,
+            })
+            order += 1
+
+    return speeches
