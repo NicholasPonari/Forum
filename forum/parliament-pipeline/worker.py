@@ -18,15 +18,6 @@ try:
     from app.celery_app import celery
     logger.info("Celery app imported successfully")
     
-    # Test Redis connection
-    try:
-        logger.info("Testing Redis connection...")
-        celery.conf.broker_connection().ensure_connection(max_retries=3)
-        logger.info("Redis connection successful")
-    except Exception as e:
-        logger.error(f"Redis connection failed: {e}")
-        raise
-    
     if __name__ == "__main__":
         logger.info("Starting Celery worker...")
         # Start the Celery worker with all pipeline queues
