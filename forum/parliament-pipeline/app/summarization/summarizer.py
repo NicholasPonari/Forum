@@ -179,7 +179,7 @@ def _build_context(
     # Prepare speaker contributions summary
     speaker_summaries = []
     for c in contributions[:50]:  # Limit to first 50 contributions
-        speaker_info = c.get("debate_speakers", {})
+        speaker_info = c.get("debate_speakers") or {}
         speaker_name = speaker_info.get("name", c.get("speaker_name_raw", "Unknown"))
         party = speaker_info.get("party", "")
         text_preview = c.get("text", "")[:300]
