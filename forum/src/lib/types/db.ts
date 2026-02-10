@@ -148,6 +148,7 @@ export interface Comment {
 // ============================================================
 
 export type DebateStatus =
+  | 'scheduled'
   | 'detected'
   | 'ingesting'
   | 'transcribing'

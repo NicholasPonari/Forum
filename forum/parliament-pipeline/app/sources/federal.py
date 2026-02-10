@@ -75,6 +75,7 @@ class FederalPoller(BasePoller):
             # The calendar uses CSS classes to indicate sitting days
             today = date.today()
             lookback = today - timedelta(days=7)
+            lookahead = today + timedelta(days=30)  # Look ahead 30 days for upcoming sittings
 
             # Find day cells with sitting indicators
             for cell in soup.select(".calendar-day, .sitting-day, td[data-date]"):
@@ -88,8 +89,8 @@ class FederalPoller(BasePoller):
                 except (ValueError, TypeError):
                     continue
 
-                # Only look at recent past dates (already concluded)
-                if lookback <= sitting_date <= today:
+                # Look for recent past dates and upcoming dates
+                if lookback <= sitting_date <= lookahead:
                     # Check if this was a sitting day (has appropriate CSS class or content)
                     if self._is_sitting_day(cell):
                         sitting_days.append({
@@ -135,12 +136,25 @@ class FederalPoller(BasePoller):
         # Try to find Hansard
         hansard_url = self._find_hansard(sitting_date)
 
-        # If neither exists, the session likely hasn't concluded or been published
+        sitting_date_obj = datetime.strptime(sitting_date, "%Y-%m-%d").date()
+        today = date.today()
+        status = "detected"
+
+        # If neither exists:
         if not video_url and not hansard_url:
-            logger.debug(f"No recording or Hansard for {sitting_date}, skipping")
-            return None
+            # If it's in the future or today, it's likely scheduled/upcoming
+            if sitting_date_obj >= today:
+                status = "scheduled"
+                logger.debug(f"Upcoming sitting found for {sitting_date}, marking as scheduled")
+            else:
+                # Past date with no content - skip it
+                logger.debug(f"No recording or Hansard for past date {sitting_date}, skipping")
+                return None
 
         source_urls = []
+        if status == "scheduled":
+             source_urls.append({"type": "calendar", "url": CALENDAR_URL, "label": "Parliament Calendar"})
+        
         if video_url:
             source_urls.append({"type": "video", "url": video_url, "label": "ParlVU Recording"})
         if hansard_url:
@@ -153,6 +167,7 @@ class FederalPoller(BasePoller):
             "date": sitting_date,
             "session_type": "house",
             "committee_name": None,
+            "status": status,
             "source_urls": source_urls,
             "hansard_url": hansard_url,
             "video_url": video_url,

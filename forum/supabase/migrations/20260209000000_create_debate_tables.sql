@@ -31,7 +31,7 @@ CREATE TABLE debates (
     ('house', 'committee', 'question_period', 'emergency', 'other')),
   committee_name TEXT,
   status TEXT NOT NULL DEFAULT 'detected' CHECK (status IN
-    ('detected', 'ingesting', 'transcribing', 'processing',
+    ('scheduled', 'detected', 'ingesting', 'transcribing', 'processing',
      'summarizing', 'categorizing', 'publishing', 'published', 'error')),
   error_message TEXT,
   retry_count INT DEFAULT 0,

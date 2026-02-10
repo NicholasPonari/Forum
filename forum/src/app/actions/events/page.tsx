@@ -184,6 +184,7 @@ export default function EventsPage() {
 							{ key: "federal", label: "Federal" },
 							{ key: "provincial", label: "Provincial" },
 							{ key: "published", label: "Published" },
+							{ key: "upcoming", label: "Upcoming" },
 						].map((f) => (
 							<Button
 								key={f.key}
