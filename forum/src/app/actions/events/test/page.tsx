@@ -47,7 +47,7 @@ export default function ParliamentDebateTestPage() {
 					: "/api/debates/test";
 			const body =
 				mode === "hansard"
-					? { sittingDate: sittingDate.trim(), title: title.trim() || undefined }
+					? { sitting_date: sittingDate.trim(), title: title.trim() || undefined }
 					: { youtubeUrl: youtubeUrl.trim(), title: title.trim() || undefined };
 
 			const headers: Record<string, string> = { "Content-Type": "application/json" };
