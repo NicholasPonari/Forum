@@ -54,10 +54,10 @@ def publish_debate(self, debate_id: str) -> str:
             .select("*")
             .eq("debate_id", debate_id)
             .eq("language", "fr")
-            .maybeSingle()
+            .limit(1)
             .execute()
         )
-        fr_summary = fr_summary_result.data if fr_summary_result.data else None
+        fr_summary = fr_summary_result.data[0] if fr_summary_result.data else None
 
         # Get primary category
         cat_result = (
