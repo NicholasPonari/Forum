@@ -7,6 +7,49 @@ from datetime import date
 from fastapi import FastAPI, HTTPException, Depends, Header
 from typing import Optional
 
+# Create the app first before any heavy imports
+app = FastAPI(
+    title="Parliament Debate Pipeline",
+    description="Automated parliamentary debate detection, transcription, and publishing pipeline",
+    version="1.0.0",
+)
+
+# Add the simple healthcheck immediately
+@app.get("/health/simple")
+async def simple_health_check():
+    """Simple health check for Railway that always returns 200 OK."""
+    return {"status": "ok"}
+
+# Now handle startup and imports
+@app.on_event("startup")
+async def startup_event():
+    """Handle application startup."""
+    logger = logging.getLogger(__name__)
+    logger.info("Starting Parliament Pipeline API...")
+    try:
+        # Import configuration and other modules after startup
+        from app.config import settings
+        from app.models import (
+            PollRequest,
+            PollResult,
+            PipelineStatus,
+            DebateInfo,
+            RetriggerRequest,
+            HealthResponse,
+            TestDebateRequest,
+        )
+        from app.utils.supabase_client import get_supabase
+        from app.utils.logging import setup_logging
+        
+        # Setup logging after import
+        setup_logging()
+        logger.info("Successfully imported core modules")
+    except Exception as e:
+        logger.error(f"Failed to import core modules: {e}")
+        # Don't raise - let the app start anyway
+    logger.info("Parliament Pipeline API started successfully")
+
+# Import the rest after the app is created
 from app.config import settings
 from app.models import (
     PollRequest,
@@ -22,12 +65,6 @@ from app.utils.logging import setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)
-
-app = FastAPI(
-    title="Parliament Debate Pipeline",
-    description="Automated parliamentary debate detection, transcription, and publishing pipeline",
-    version="1.0.0",
-)
 
 
 async def verify_api_key(x_api_key: Optional[str] = Header(None)):
@@ -66,12 +103,6 @@ async def health_check():
     # Always return 200 OK for Railway healthcheck
     # The detailed status is in the response body
     return response
-
-
-@app.get("/health/simple")
-async def simple_health_check():
-    """Simple health check for Railway that always returns 200 OK."""
-    return {"status": "ok"}
 
 
 @app.post("/api/poll", response_model=list[PollResult])
