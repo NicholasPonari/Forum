@@ -10,5 +10,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from app.celery_app import celery
 
 if __name__ == "__main__":
-    # Start the Celery worker
-    celery.start(["worker", "--loglevel=info", "--concurrency=2"])
+    # Start the Celery worker with all pipeline queues
+    celery.start([
+        "worker", 
+        "--loglevel=info", 
+        "--concurrency=2",
+        "--queues=celery,polling,processing,ingestion,transcription,summarization,publishing"
+    ])
