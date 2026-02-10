@@ -12,6 +12,7 @@ import logging
 from app.celery_app import celery
 from app.utils.retry import update_debate_status, mark_debate_error
 from app.sources.hansard_scraper import scrape_hansard_for_date
+from app.processing.speaker_mapper import _normalize_name
 from app.utils.supabase_client import get_supabase
 
 logger = logging.getLogger(__name__)
@@ -73,9 +74,12 @@ def scrape_hansard(self, debate_id: str) -> str:
 
         # Store speakers in debate_speakers table
         for speaker in hansard_data["speakers"]:
+            name = speaker["name"]
+            name_normalized = _normalize_name(name)
             supabase.table("debate_speakers").upsert({
-                "debate_id": debate_id,
-                "name": speaker["name"],
+                "legislature_id": debate["legislature_id"],
+                "name": name,
+                "name_normalized": name_normalized,
                 "party": speaker.get("party", ""),
                 "riding": speaker.get("riding", ""),
                 "external_id": speaker.get("member_id"),
@@ -85,7 +89,7 @@ def scrape_hansard(self, debate_id: str) -> str:
                     "speech_count": speaker.get("speech_count", 0),
                     "source": "hansard_scrape",
                 },
-            }, on_conflict="debate_id,name").execute()
+            }, on_conflict="legislature_id,name_normalized").execute()
 
         # Store contributions (individual speeches) grouped by topic
         order = 0
