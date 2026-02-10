@@ -47,7 +47,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
 				</svg>
 			</button>
 			{open && (
-				<div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-lg py-3 px-4 flex flex-col gap-2 min-w-[200px] z-50">
+				<div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-xl py-3 px-4 flex flex-col gap-2 min-w-[200px] z-[100] border border-gray-100">
 					{user ? (
 						<>
 							<Link href="/about" onClick={() => setOpen(false)}>

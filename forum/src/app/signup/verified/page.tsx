@@ -149,11 +149,18 @@ function VerifiedSignUpPageContent() {
 
 	React.useEffect(() => {
 		if (step === 6 && confettiRef.current) {
-			confettiRef.current.fire({
-				particleCount: 100,
-				spread: 70,
-				origin: { y: 0.6 },
-			});
+			// Small delay to ensure component is fully mounted
+			setTimeout(() => {
+				confettiRef.current?.fire({
+					particleCount: 200,
+					spread: 180,
+					origin: { y: -0.1, x: 0.5 },
+					gravity: 0.8,
+					ticks: 300,
+					shapes: ["circle", "square"],
+					colors: ["#26ccff", "#a259ff", "#ff2121", "#ffbd00", "#0058ff", "#00ff27"]
+				});
+			}, 300);
 		}
 	}, [step]);
 

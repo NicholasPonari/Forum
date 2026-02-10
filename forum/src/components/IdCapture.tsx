@@ -169,12 +169,12 @@ export default function IdCapture({
       targetW = targetH * (ratio.width / ratio.height);
     } else {
       // Cards - landscape orientation
-      targetW = w * 0.8;
+      targetW = w * 0.9;
       targetH = targetW / (ratio.width / ratio.height);
       
-      // Make sure it fits vertically
-      if (targetH > h * 0.7) {
-        targetH = h * 0.7;
+      // Make sure it fits vertically and doesn't look too small
+      if (targetH > h * 0.75) {
+        targetH = h * 0.75;
         targetW = targetH * (ratio.width / ratio.height);
       }
     }
