@@ -1,0 +1,133 @@
+<div class="debate-post" style="font-family: system-ui, -apple-system, sans-serif; line-height: 1.6;">
+
+  <!-- Meta badges -->
+  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center;">
+    <span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; background: #fef3c7; color: #92400e;">
+      {{ legislature_name }}
+    </span>
+    <span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; background: #f3f4f6; color: #374151;">
+      {{ session_type_label }}
+    </span>
+    <span style="font-size: 13px; color: #6b7280;">{{ date_formatted }}</span>
+    {% if duration_formatted %}
+    <span style="font-size: 13px; color: #6b7280;">&bull; {{ duration_formatted }}</span>
+    {% endif %}
+  </div>
+
+  <!-- Summary -->
+  <h2 style="font-size: 18px; font-weight: 700; margin: 20px 0 8px 0; color: #111827;">Summary</h2>
+  <div style="color: #374151; font-size: 15px; margin-bottom: 20px;">
+    {{ summary_html }}
+  </div>
+
+  <!-- Key Participants -->
+  {% if key_participants %}
+  <h2 style="font-size: 18px; font-weight: 700; margin: 20px 0 8px 0; color: #111827;">Key Participants</h2>
+  <ul style="list-style: none; padding: 0; margin: 0 0 20px 0;">
+    {% for p in key_participants %}
+    <li style="padding: 8px 0; border-bottom: 1px solid #f3f4f6;">
+      <strong style="color: #111827;">{{ p.name }}</strong>
+      {% if p.party or p.riding %}
+      <span style="color: #6b7280; font-size: 13px;">
+        ({% if p.party %}{{ p.party }}{% endif %}{% if p.party and p.riding %}, {% endif %}{% if p.riding %}{{ p.riding }}{% endif %})
+      </span>
+      {% endif %}
+      {% if p.stance_summary %}
+      <br><span style="color: #4b5563; font-size: 14px;">&mdash; {{ p.stance_summary }}</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <!-- Key Issues -->
+  {% if key_issues %}
+  <h2 style="font-size: 18px; font-weight: 700; margin: 20px 0 8px 0; color: #111827;">Key Issues Raised</h2>
+  <ul style="list-style: none; padding: 0; margin: 0 0 20px 0;">
+    {% for issue in key_issues %}
+    <li style="padding: 8px 0; border-bottom: 1px solid #f3f4f6;">
+      <strong style="color: #111827;">{{ issue.issue }}</strong>
+      {% if issue.description %}
+      <br><span style="color: #4b5563; font-size: 14px;">{{ issue.description }}</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <!-- Outcome -->
+  {% if outcome_text %}
+  <h2 style="font-size: 18px; font-weight: 700; margin: 20px 0 8px 0; color: #111827;">Outcome</h2>
+  <div style="padding: 12px 16px; background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 4px; color: #166534; font-size: 14px; margin-bottom: 20px;">
+    {{ outcome_text }}
+  </div>
+  {% endif %}
+
+  <!-- Vote Results -->
+  {% if votes %}
+  <h2 style="font-size: 18px; font-weight: 700; margin: 20px 0 8px 0; color: #111827;">Vote Results</h2>
+  {% for vote in votes %}
+  <div style="padding: 12px 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 12px;">
+    {% if vote.motion_text %}
+    <p style="margin: 0 0 8px 0; font-weight: 600; color: #111827; font-size: 14px;">{{ vote.motion_text }}</p>
+    {% endif %}
+    {% if vote.bill_number %}
+    <p style="margin: 0 0 8px 0; font-size: 13px; color: #6b7280;">Bill {{ vote.bill_number }}</p>
+    {% endif %}
+    <div style="display: flex; gap: 16px; align-items: center; font-size: 14px;">
+      <span style="color: #16a34a; font-weight: 600;">Yea: {{ vote.yea }}</span>
+      <span style="color: #dc2626; font-weight: 600;">Nay: {{ vote.nay }}</span>
+      {% if vote.abstain %}<span style="color: #6b7280;">Abstain: {{ vote.abstain }}</span>{% endif %}
+      <span style="padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 12px; text-transform: uppercase; {% if vote.result == 'passed' %}background: #dcfce7; color: #166534;{% elif vote.result == 'defeated' %}background: #fee2e2; color: #991b1b;{% else %}background: #f3f4f6; color: #374151;{% endif %}">
+        {{ vote.result }}
+      </span>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <!-- French Summary (collapsible) -->
+  {% if fr_summary %}
+  <details style="margin: 20px 0; border: 1px solid #e5e7eb; border-radius: 8px;">
+    <summary style="padding: 12px 16px; cursor: pointer; font-weight: 600; color: #374151; font-size: 14px; background: #f9fafb; border-radius: 8px;">
+      Résumé en français
+    </summary>
+    <div style="padding: 16px; color: #374151; font-size: 14px;">
+      {{ fr_summary }}
+    </div>
+  </details>
+  {% endif %}
+
+  <!-- Sources -->
+  <h2 style="font-size: 18px; font-weight: 700; margin: 20px 0 8px 0; color: #111827;">Sources</h2>
+  <ul style="list-style: none; padding: 0; margin: 0;">
+    {% if hansard_url %}
+    <li style="padding: 4px 0;">
+      <a href="{{ hansard_url }}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: none; font-size: 14px;">
+        &#128196; Official Transcript (Hansard)
+      </a>
+    </li>
+    {% endif %}
+    {% if video_url %}
+    <li style="padding: 4px 0;">
+      <a href="{{ video_url }}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: none; font-size: 14px;">
+        &#127909; Video Recording
+      </a>
+    </li>
+    {% endif %}
+    {% for src in source_urls %}
+    <li style="padding: 4px 0;">
+      <a href="{{ src.url }}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: none; font-size: 14px;">
+        &#128279; {{ src.label }}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <!-- Attribution -->
+  <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af;">
+    This debate summary was automatically generated by Vox.Vote from official parliamentary sources.
+    Content is for informational purposes. For the authoritative record, refer to the official Hansard.
+  </div>
+
+</div>

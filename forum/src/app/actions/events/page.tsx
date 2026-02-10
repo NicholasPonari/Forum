@@ -7,66 +7,45 @@ import { DistrictNav } from "@/components/DistrictNav";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CalendarDays, MapPin, Clock, ExternalLink, Calendar } from "lucide-react";
+import {
+	ArrowLeft,
+	CalendarDays,
+	Clock,
+	ExternalLink,
+	Landmark,
+	Play,
+	FileText,
+	Globe,
+} from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabaseClient";
+import type { Debate, Legislature } from "@/lib/types/db";
 
-interface Event {
-	id: string;
-	title: string;
-	description: string;
-	date: string;
-	time: string;
-	location: string;
-	type: "town-hall" | "council-meeting" | "public-hearing" | "community" | "election";
-	level: "federal" | "provincial" | "municipal";
-	link?: string;
-}
-
-const EVENT_TYPES = {
-	"town-hall": { label: "Town Hall", color: "bg-blue-100 text-blue-700" },
-	"council-meeting": { label: "Council Meeting", color: "bg-purple-100 text-purple-700" },
-	"public-hearing": { label: "Public Hearing", color: "bg-orange-100 text-orange-700" },
-	"community": { label: "Community Event", color: "bg-green-100 text-green-700" },
-	"election": { label: "Election", color: "bg-red-100 text-red-700" },
+const SESSION_TYPE_LABELS: Record<string, string> = {
+	house: "House Debate",
+	committee: "Committee Meeting",
+	question_period: "Question Period",
+	emergency: "Emergency Debate",
+	other: "Session",
 };
 
-const PLACEHOLDER_EVENTS: Event[] = [
-	{
-		id: "1",
-		title: "City Council Meeting",
-		description: "Regular bi-weekly city council meeting. Public comments welcome.",
-		date: "2024-12-18",
-		time: "7:00 PM",
-		location: "City Hall, Council Chambers",
-		type: "council-meeting",
-		level: "municipal",
-	},
-	{
-		id: "2",
-		title: "Community Town Hall on Transit",
-		description: "Discuss upcoming transit improvements and provide feedback on proposed routes.",
-		date: "2024-12-20",
-		time: "6:30 PM",
-		location: "Community Center, Main Hall",
-		type: "town-hall",
-		level: "municipal",
-	},
-	{
-		id: "3",
-		title: "Public Hearing: Zoning Amendment",
-		description: "Public hearing on proposed zoning changes for the downtown core.",
-		date: "2024-12-22",
-		time: "2:00 PM",
-		location: "Planning Office, Room 201",
-		type: "public-hearing",
-		level: "municipal",
-	},
-];
+const STATUS_STYLES: Record<string, string> = {
+	published: "bg-green-100 text-green-700",
+	processing: "bg-blue-100 text-blue-700",
+	transcribing: "bg-yellow-100 text-yellow-700",
+	detected: "bg-gray-100 text-gray-600",
+	error: "bg-red-100 text-red-700",
+};
+
+interface DebateWithLegislature extends Debate {
+	legislatures: Legislature;
+}
 
 export default function EventsPage() {
 	const [loading, setLoading] = useState(true);
-	const [events, setEvents] = useState<Event[]>([]);
+	const [debates, setDebates] = useState<DebateWithLegislature[]>([]);
+	const [filter, setFilter] = useState<string>("all");
 	const [scrollProgress, setScrollProgress] = useState(0);
 	const headerLogoRef = useRef<HTMLDivElement>(null);
 
@@ -81,12 +60,63 @@ export default function EventsPage() {
 	}, []);
 
 	useEffect(() => {
-		// Simulate loading
-		setTimeout(() => {
-			setEvents(PLACEHOLDER_EVENTS);
-			setLoading(false);
-		}, 500);
+		async function fetchDebates() {
+			try {
+				const supabase = createClient();
+				const query = supabase
+					.from("debates")
+					.select("*, legislatures(*)")
+					.order("date", { ascending: false })
+					.limit(50);
+
+				const { data, error } = await query;
+
+				if (error) {
+					console.error("Error fetching debates:", error);
+					setDebates([]);
+				} else {
+					setDebates((data as DebateWithLegislature[]) || []);
+				}
+			} catch (err) {
+				console.error("Failed to fetch debates:", err);
+				setDebates([]);
+			} finally {
+				setLoading(false);
+			}
+		}
+
+		fetchDebates();
 	}, []);
+
+	const filteredDebates = debates.filter((debate) => {
+		if (filter === "all") return true;
+		if (filter === "federal") return debate.legislatures?.level === "federal";
+		if (filter === "provincial") return debate.legislatures?.level === "provincial";
+		if (filter === "published") return debate.status === "published";
+		return true;
+	});
+
+	function formatDuration(seconds: number | null | undefined): string {
+		if (!seconds) return "";
+		const hours = Math.floor(seconds / 3600);
+		const minutes = Math.floor((seconds % 3600) / 60);
+		if (hours > 0) return `${hours}h ${minutes}m`;
+		return `${minutes}m`;
+	}
+
+	function formatDate(dateStr: string): string {
+		try {
+			const d = new Date(dateStr + "T00:00:00");
+			return d.toLocaleDateString("en-CA", {
+				weekday: "short",
+				month: "short",
+				day: "numeric",
+				year: "numeric",
+			});
+		} catch {
+			return dateStr;
+		}
+	}
 
 	if (loading) {
 		return (
@@ -99,7 +129,7 @@ export default function EventsPage() {
 					<main className="flex-1 p-6">
 						<Skeleton className="h-12 w-64 mb-6" />
 						<div className="space-y-4">
-							{[1, 2, 3].map((i) => (
+							{[1, 2, 3, 4].map((i) => (
 								<Skeleton key={i} className="h-32" />
 							))}
 						</div>
@@ -127,91 +157,147 @@ export default function EventsPage() {
 							Back to home
 						</Link>
 						<div className="flex items-center gap-3">
-							<div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
-								<CalendarDays className="w-5 h-5" />
+							<div className="flex items-center justify-center w-10 h-10 rounded-lg bg-amber-100 text-amber-700">
+								<Landmark className="w-5 h-5" />
 							</div>
 							<div>
-								<h1 className="text-2xl font-bold">Upcoming Events</h1>
+								<h1 className="text-2xl font-bold">Parliamentary Debates</h1>
 								<p className="text-sm text-gray-500">
-									Town halls, council meetings, and civic events in your area
+									Automated summaries of House debates, committee meetings, and question periods
 								</p>
 							</div>
 						</div>
 					</div>
 
-					{/* Coming Soon Notice */}
-					<div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-						<div className="flex items-start gap-3">
-							<Calendar className="w-5 h-5 text-amber-600 mt-0.5" />
-							<div>
-								<p className="font-medium text-amber-800">Event Calendar Coming Soon</p>
-								<p className="text-sm text-amber-700 mt-1">
-									We&apos;re building an integrated calendar of civic events. Below are example events to show what&apos;s coming.
-								</p>
-							</div>
-						</div>
+					{/* Filter bar */}
+					<div className="flex gap-2 mb-6 overflow-x-auto pb-1">
+						{[
+							{ key: "all", label: "All Debates" },
+							{ key: "federal", label: "Federal" },
+							{ key: "provincial", label: "Provincial" },
+							{ key: "published", label: "Published" },
+						].map((f) => (
+							<Button
+								key={f.key}
+								variant={filter === f.key ? "default" : "outline"}
+								size="sm"
+								className="rounded-full whitespace-nowrap"
+								onClick={() => setFilter(f.key)}
+							>
+								{f.label}
+							</Button>
+						))}
 					</div>
 
-					{/* Events List */}
-					<div className="space-y-4">
-						{events.map((event) => (
+					{/* Debates list */}
+					{filteredDebates.length === 0 && !loading && (
+						<div className="text-center py-12 bg-white rounded-xl border">
+							<Landmark className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+							<p className="text-gray-500 mb-2">No debates found</p>
+							<p className="text-sm text-gray-400">
+								{debates.length === 0
+									? "The debate tracking pipeline will populate this page automatically as new parliamentary sessions are processed."
+									: "Try a different filter to see more debates."}
+							</p>
+						</div>
+					)}
+
+					<div className="space-y-3">
+						{filteredDebates.map((debate) => (
 							<div
-								key={event.id}
+								key={debate.id}
 								className="bg-white rounded-xl border p-4 hover:shadow-md transition-shadow"
 							>
 								<div className="flex items-start justify-between gap-4">
-									<div className="flex-1">
-										<div className="flex items-center gap-2 mb-2">
-											<Badge className={cn("text-xs", EVENT_TYPES[event.type].color)}>
-												{EVENT_TYPES[event.type].label}
+									<div className="flex-1 min-w-0">
+										{/* Badges */}
+										<div className="flex flex-wrap items-center gap-2 mb-2">
+											<Badge
+												className={cn(
+													"text-xs",
+													debate.legislatures?.level === "federal"
+														? "bg-blue-100 text-blue-700"
+														: "bg-purple-100 text-purple-700"
+												)}
+											>
+												<Globe className="w-3 h-3 mr-1" />
+												{debate.legislatures?.code || "??"}
 											</Badge>
 											<Badge variant="outline" className="text-xs capitalize">
-												{event.level}
+												{SESSION_TYPE_LABELS[debate.session_type] || debate.session_type}
+											</Badge>
+											<Badge
+												className={cn(
+													"text-xs",
+													STATUS_STYLES[debate.status] || "bg-gray-100 text-gray-600"
+												)}
+											>
+												{debate.status}
 											</Badge>
 										</div>
-										<h3 className="font-semibold text-lg">{event.title}</h3>
-										<p className="text-sm text-gray-600 mt-1">{event.description}</p>
-										<div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500">
+
+										{/* Title */}
+										<h3 className="font-semibold text-base text-gray-900 line-clamp-2">
+											{debate.title}
+										</h3>
+
+										{/* Meta info */}
+										<div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
 											<span className="flex items-center gap-1">
 												<CalendarDays className="w-4 h-4" />
-												{new Date(event.date).toLocaleDateString("en-CA", {
-													weekday: "short",
-													month: "short",
-													day: "numeric",
-												})}
+												{formatDate(debate.date)}
 											</span>
-											<span className="flex items-center gap-1">
-												<Clock className="w-4 h-4" />
-												{event.time}
-											</span>
-											<span className="flex items-center gap-1">
-												<MapPin className="w-4 h-4" />
-												{event.location}
+											{debate.duration_seconds && (
+												<span className="flex items-center gap-1">
+													<Clock className="w-4 h-4" />
+													{formatDuration(debate.duration_seconds)}
+												</span>
+											)}
+											<span className="text-xs text-gray-400">
+												{debate.legislatures?.name}
 											</span>
 										</div>
 									</div>
-									{event.link && (
-										<Button variant="outline" size="sm" asChild>
-											<a href={event.link} target="_blank" rel="noopener noreferrer">
-												<ExternalLink className="w-4 h-4 mr-1" />
-												Details
-											</a>
-										</Button>
-									)}
+
+									{/* Action buttons */}
+									<div className="flex flex-col gap-2 shrink-0">
+										{debate.status === "published" && (
+											<Button variant="default" size="sm" asChild>
+												<Link href={`/?q=${encodeURIComponent(debate.title)}`}>
+													<FileText className="w-4 h-4 mr-1" />
+													View Post
+												</Link>
+											</Button>
+										)}
+										{debate.video_url && (
+											<Button variant="outline" size="sm" asChild>
+												<a
+													href={debate.video_url}
+													target="_blank"
+													rel="noopener noreferrer"
+												>
+													<Play className="w-4 h-4 mr-1" />
+													Video
+												</a>
+											</Button>
+										)}
+										{debate.hansard_url && (
+											<Button variant="outline" size="sm" asChild>
+												<a
+													href={debate.hansard_url}
+													target="_blank"
+													rel="noopener noreferrer"
+												>
+													<ExternalLink className="w-4 h-4 mr-1" />
+													Hansard
+												</a>
+											</Button>
+										)}
+									</div>
 								</div>
 							</div>
 						))}
 					</div>
-
-					{events.length === 0 && (
-						<div className="text-center py-12 bg-white rounded-xl border">
-							<CalendarDays className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-							<p className="text-gray-500 mb-2">No upcoming events</p>
-							<p className="text-sm text-gray-400">
-								Check back later for civic events in your area
-							</p>
-						</div>
-					)}
 				</main>
 			</div>
 			<Footer />

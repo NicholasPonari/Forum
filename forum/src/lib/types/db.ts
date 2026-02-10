@@ -143,6 +143,172 @@ export interface Comment {
 	updated_at?: string;
 }
 
+// ============================================================
+// Parliamentary Debate Types
+// ============================================================
+
+export type DebateStatus =
+  | 'detected'
+  | 'ingesting'
+  | 'transcribing'
+  | 'processing'
+  | 'summarizing'
+  | 'categorizing'
+  | 'publishing'
+  | 'published'
+  | 'error';
+
+export type DebateSessionType =
+  | 'house'
+  | 'committee'
+  | 'question_period'
+  | 'emergency'
+  | 'other';
+
+export interface Legislature {
+  id: string;
+  name: string;
+  name_fr?: string;
+  code: string;
+  level: 'federal' | 'provincial';
+  website_url?: string;
+  video_base_url?: string;
+  hansard_base_url?: string;
+  calendar_url?: string;
+  created_at: string;
+}
+
+export interface Debate {
+  id: string;
+  legislature_id: string;
+  external_id?: string;
+  title: string;
+  title_fr?: string;
+  date: string;
+  session_type: DebateSessionType;
+  committee_name?: string;
+  status: DebateStatus;
+  error_message?: string;
+  retry_count: number;
+  duration_seconds?: number;
+  source_urls: { type: string; url: string; label: string }[];
+  hansard_url?: string;
+  video_url?: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  legislatures?: Legislature;
+}
+
+export interface DebateMediaAsset {
+  id: string;
+  debate_id: string;
+  media_type: 'video' | 'audio';
+  source: string;
+  original_url: string;
+  local_path?: string;
+  file_size_bytes?: number;
+  duration_seconds?: number;
+  language?: string;
+  status: 'pending' | 'downloading' | 'ready' | 'error';
+  created_at: string;
+}
+
+export interface DebateTranscript {
+  id: string;
+  debate_id: string;
+  language: string;
+  raw_text?: string;
+  segments?: { start: number; end: number; text: string; speaker_label?: string }[];
+  whisper_model?: string;
+  avg_confidence?: number;
+  word_count?: number;
+  processing_time_seconds?: number;
+  created_at: string;
+}
+
+export interface DebateSpeaker {
+  id: string;
+  legislature_id?: string;
+  name: string;
+  name_normalized?: string;
+  party?: string;
+  riding?: string;
+  role?: string;
+  external_person_id?: string;
+  profile_id?: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface DebateContribution {
+  id: string;
+  debate_id: string;
+  speaker_id?: string;
+  speaker_name_raw?: string;
+  start_time_seconds?: number;
+  end_time_seconds?: number;
+  duration_seconds?: number;
+  text: string;
+  text_fr?: string;
+  key_points: { point: string; stance?: string }[];
+  language?: string;
+  sequence_order?: number;
+  created_at: string;
+  // Joined fields
+  debate_speakers?: DebateSpeaker;
+}
+
+export interface DebateVote {
+  id: string;
+  debate_id: string;
+  motion_text?: string;
+  motion_text_fr?: string;
+  bill_number?: string;
+  yea: number;
+  nay: number;
+  abstain: number;
+  paired: number;
+  result?: 'passed' | 'defeated' | 'tied';
+  source_vote_id?: string;
+  vote_details: { speaker_id: string; vote: string }[];
+  created_at: string;
+}
+
+export interface DebateSummary {
+  id: string;
+  debate_id: string;
+  language: string;
+  summary_text: string;
+  key_participants: { name: string; party?: string; riding?: string; stance_summary: string }[];
+  key_issues: { issue: string; description: string }[];
+  outcome_text?: string;
+  llm_model?: string;
+  created_at: string;
+}
+
+export interface DebateCategory {
+  id: string;
+  debate_id: string;
+  topic_slug: string;
+  confidence: number;
+  is_primary: boolean;
+  created_at: string;
+}
+
+export interface DebateForumPost {
+  id: string;
+  debate_id: string;
+  issue_id?: string;
+  status: 'pending' | 'created' | 'updated' | 'error';
+  error_message?: string;
+  post_html?: string;
+  retry_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Politician {
   id: string;
   idx?: number;

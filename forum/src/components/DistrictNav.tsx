@@ -664,8 +664,8 @@ export function DistrictNav({
 							<div className="ml-2 mt-1 space-y-1">
 								<NavItem
 									href="/actions/events"
-									icon={CalendarDays}
-									label="Upcoming Events"
+									icon={Landmark}
+									label="Parliamentary Debates"
 									isActive={isPathActive("/actions/events")}
 									indent
 								/>

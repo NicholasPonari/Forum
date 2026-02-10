@@ -133,6 +133,7 @@ export const translations = {
       Problem: "Problem",
       Idea: "Idea",
       Question: "Question",
+      Debate: "Debate",
     },
     vote: {
       loginToVote: "You must be logged in to vote.",
@@ -286,6 +287,7 @@ export const translations = {
       Problem: "Problème",
       Idea: "Idée",
       Question: "Question",
+      Debate: "Débat",
     },
     vote: {
       loginToVote: "Vous devez être connecté pour voter.",

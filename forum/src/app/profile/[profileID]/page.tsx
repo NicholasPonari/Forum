@@ -968,6 +968,7 @@ export default function ProfilePage() {
 																	${issue.type === "Problem" ? "bg-red-100 text-red-800 border-red-200" : ""}
 																	${issue.type === "Idea" ? "bg-green-100 text-green-800 border-green-200" : ""}
 																	${issue.type === "Question" ? "bg-blue-100 text-blue-800 border-blue-200" : ""}
+																	${issue.type === "Debate" ? "bg-amber-100 text-amber-800 border-amber-200" : ""}
 																`}
 																variant="outline"
 															>
@@ -1077,6 +1078,7 @@ export default function ProfilePage() {
 																		${post.type === "Problem" ? "bg-red-100 text-red-800 border-red-200" : ""}
 																		${post.type === "Idea" ? "bg-green-100 text-green-800 border-green-200" : ""}
 																		${post.type === "Question" ? "bg-blue-100 text-blue-800 border-blue-200" : ""}
+																		${post.type === "Debate" ? "bg-amber-100 text-amber-800 border-amber-200" : ""}
 																	`}
 																	variant="outline"
 																>
