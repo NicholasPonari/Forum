@@ -27,11 +27,17 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-# Publication Search base URL
+# Publication Search base URL (WAF-protected, used only as last-resort fallback)
 PUB_SEARCH_BASE = "https://www.ourcommons.ca/PublicationSearch/en/"
 
-# XML feed endpoint (documented under ourcommons.ca Open Data -> Publications Search)
-PUB_SEARCH_XML = PUB_SEARCH_BASE
+# Static Hansard XML base — NOT WAF-protected
+# Pattern: /Content/House/{Parl}{Ses}/Debates/{Num}/HAN{Num}-E.XML
+HANSARD_XML_BASE = "https://www.ourcommons.ca/Content/House"
+
+# Current parliament/session info
+CURRENT_PARLIAMENT = 45
+CURRENT_SESSION = 1
+LATEST_KNOWN_SITTING = 82  # Update periodically; used as probe starting point
 
 
 def _build_http_client() -> httpx.Client:
@@ -65,9 +71,12 @@ ORDER_OF_BUSINESS = {
     "GovernmentOrders": "Government Orders",
     "OralQuestionPeriod": "Oral Question Period",
     "RoutineProceedings": "Routine Proceedings",
-    "StatementsbyMembers": "Statements by Members",
+    "StatementsByMembers": "Statements by Members",
     "PrivateMembersBusiness": "Private Members' Business",
     "AdjournmentProceedings": "Adjournment Proceedings",
+    # Alternate Rubric values found in static Hansard XML
+    "LateShow": "Adjournment Proceedings",
+    "Other": "Government Orders",
 }
 
 
@@ -92,25 +101,23 @@ def scrape_hansard_for_date(sitting_date: str, hansard_number: str | None = None
     topics_seen = set()
 
     with _build_http_client() as client:
-        xml_speeches: list[dict] = []
+        # Strategy 1: Fetch static Hansard XML (bypasses WAF entirely)
         try:
-            xml_speeches = _scrape_from_publication_search_xml(client, sitting_date)
-        except Exception as e:
-            logger.warning(f"XML Hansard scrape failed for {sitting_date}: {e}")
-
-        if xml_speeches:
-            all_speeches = xml_speeches
-            for s in xml_speeches:
+            all_speeches = _scrape_from_static_hansard_xml(client, sitting_date)
+            for s in all_speeches:
                 for t in s.get("topics", []):
                     topics_seen.add(t["title"])
-        else:
-            # Warm-up request to establish cookies/session (some WAF setups block direct deep links)
+        except Exception as e:
+            logger.warning(f"Static Hansard XML scrape failed for {sitting_date}: {e}")
+
+        # Strategy 2: Fall back to HTML Publication Search (may be WAF-blocked)
+        if not all_speeches:
+            logger.info(f"Static XML empty, falling back to HTML scrape for {sitting_date}")
             try:
                 _ = _make_request(client, PUB_SEARCH_BASE, params={"PubType": "37"})
             except Exception as e:
                 logger.warning(f"Hansard warm-up request failed: {e}")
 
-            # Scrape each Order of Business section separately for better categorization
             for oob_key, oob_label in ORDER_OF_BUSINESS.items():
                 try:
                     section_speeches = _scrape_section(client, sitting_date, oob_key, oob_label)
@@ -121,7 +128,6 @@ def scrape_hansard_for_date(sitting_date: str, hansard_number: str | None = None
                 except Exception as e:
                     logger.warning(f"Error scraping {oob_label} for {sitting_date}: {e}")
 
-            # If section-based scrape got nothing, try a broad scrape
             if not all_speeches:
                 logger.info(f"Section scrape empty, trying broad scrape for {sitting_date}")
                 all_speeches = _scrape_broad(client, sitting_date)
@@ -586,115 +592,227 @@ def _make_request(client: httpx.Client, url: str, params: dict[str, str] | None 
     return response
 
 
-def _scrape_from_publication_search_xml(client: httpx.Client, sitting_date: str) -> list[dict]:
-    params = {
-        "PubType": "37",
-        "View": "D",
-        "xml": "1",
-        "RPP": "1000",
-        "Page": "1",
-        "ParlSes": "45-1",
-        "order": "chron",
-    }
+def _build_hansard_xml_url(parliament: int, session: int, sitting_number: int) -> str:
+    """Build the static Hansard XML URL for a given sitting.
 
-    response = _make_request(client, PUB_SEARCH_XML, params=params)
+    Example: https://www.ourcommons.ca/Content/House/451/Debates/082/HAN082-E.XML
+    """
+    parl_ses = f"{parliament}{session}"  # e.g. "451"
+    num_str = f"{sitting_number:03d}"    # e.g. "082"
+    return f"{HANSARD_XML_BASE}/{parl_ses}/Debates/{num_str}/HAN{num_str}-E.XML"
+
+
+def _discover_sitting_number(
+    client: httpx.Client, sitting_date: str,
+    parliament: int = CURRENT_PARLIAMENT, session: int = CURRENT_SESSION,
+) -> int | None:
+    """Discover the sitting number for a given date by probing static XML files.
+
+    The static XML header contains:
+      <ExtractedItem Name="MetaDateNumYear">2026</ExtractedItem>
+      <ExtractedItem Name="MetaDateNumMonth">02</ExtractedItem>
+      <ExtractedItem Name="MetaDateNumDay">09</ExtractedItem>
+
+    We probe outward from LATEST_KNOWN_SITTING checking these fields.
+    """
+    # Parse target date components
+    try:
+        target = datetime.strptime(sitting_date, "%Y-%m-%d")
+    except ValueError:
+        return None
+    target_year = f"{target.year}"
+    target_month = f"{target.month:02d}"
+    target_day = f"{target.day:02d}"
+
+    # Build candidate list: start from latest known, fan outward
+    candidates: list[int] = []
+    for offset in range(0, 40):
+        candidates.append(LATEST_KNOWN_SITTING - offset)
+        if offset > 0:
+            candidates.append(LATEST_KNOWN_SITTING + offset)
+    candidates = [n for n in candidates if n >= 1]
+
+    for sitting_num in candidates:
+        url = _build_hansard_xml_url(parliament, session, sitting_num)
+        try:
+            # Stream the response so we only download the first few KB
+            with client.stream("GET", url) as response:
+                if response.status_code in (404, 403):
+                    continue
+                if response.status_code != 200:
+                    continue
+
+                # Read just enough bytes for the ExtractedInformation header (~4KB)
+                header_bytes = b""
+                for chunk in response.iter_bytes(chunk_size=4096):
+                    header_bytes += chunk
+                    if len(header_bytes) >= 4096:
+                        break
+                header = header_bytes.decode("utf-8", errors="replace")
+
+            # Check for MetaDateNumYear/Month/Day
+            year_match = re.search(r'Name="MetaDateNumYear">\s*(\d{4})\s*<', header)
+            month_match = re.search(r'Name="MetaDateNumMonth">\s*(\d{2})\s*<', header)
+            day_match = re.search(r'Name="MetaDateNumDay">\s*(\d{2})\s*<', header)
+
+            if year_match and month_match and day_match:
+                if (year_match.group(1) == target_year and
+                        month_match.group(1) == target_month and
+                        day_match.group(1) == target_day):
+                    logger.info(f"Found sitting {sitting_num} for date {sitting_date}")
+                    return sitting_num
+
+        except Exception:
+            continue
+
+    return None
+
+
+def _scrape_from_static_hansard_xml(client: httpx.Client, sitting_date: str) -> list[dict]:
+    """Fetch and parse the static Hansard XML file for a given date.
+
+    The static XML files at /Content/House/451/Debates/{num}/HAN{num}-E.XML
+    are NOT behind the WAF and contain the full structured Hansard transcript.
+
+    Structure:
+      <Hansard>
+        <HansardBody>
+          <OrderOfBusiness Rubric="PrivateMembersBusiness">
+            <OrderOfBusinessTitle>Private Members' Business</OrderOfBusinessTitle>
+            <SubjectOfBusiness>
+              <SubjectOfBusinessTitle>Financial Administration Act</SubjectOfBusinessTitle>
+              <SubjectOfBusinessContent>
+                <Intervention Type="Debate">
+                  <PersonSpeaking><Affiliation>Name (Riding, Party)</Affiliation></PersonSpeaking>
+                  <Content><ParaText>...</ParaText></Content>
+                </Intervention>
+    """
+    sitting_num = _discover_sitting_number(client, sitting_date)
+    if sitting_num is None:
+        logger.warning(f"Could not discover sitting number for {sitting_date}")
+        return []
+
+    url = _build_hansard_xml_url(CURRENT_PARLIAMENT, CURRENT_SESSION, sitting_num)
+    logger.info(f"Fetching static Hansard XML: {url}")
+
+    response = client.get(url)
+    response.raise_for_status()
+
     root = ET.fromstring(response.text)
 
     speeches: list[dict] = []
     order = 0
 
-    for pub in root.findall(".//Publication"):
-        pub_date = pub.attrib.get("Date", "")
-        hansard_num = pub.attrib.get("Title", "")
-        _ = hansard_num
+    # Walk the structured hierarchy: OrderOfBusiness > SubjectOfBusiness > Intervention
+    for oob in root.iter("OrderOfBusiness"):
+        # Get section label from <OrderOfBusinessTitle> or Rubric attribute
+        oob_title_el = oob.find("OrderOfBusinessTitle")
+        section_label = ""
+        if oob_title_el is not None and oob_title_el.text:
+            section_label = oob_title_el.text.strip()
+        if not section_label:
+            rubric = oob.attrib.get("Rubric", "")
+            section_label = ORDER_OF_BUSINESS.get(rubric, rubric or "General")
 
-        for item in pub.findall(".//PublicationItem"):
-            item_date = item.attrib.get("Date", pub_date)
-            if item_date != sitting_date:
-                continue
-
-            person = item.find("Person")
-            person_id = person.attrib.get("Id") if person is not None else None
-
-            profile_url = ""
-            first_name = ""
-            last_name = ""
-            riding = ""
-            party = ""
-            province = ""
-            if person is not None:
-                profile_el = person.find("ProfileUrl")
-                if profile_el is not None and (profile_el.text or ""):
-                    profile_url = profile_el.text.strip()
-                    if profile_url.startswith("//"):
-                        profile_url = "https:" + profile_url
-                    elif profile_url.startswith("/"):
-                        profile_url = "https://www.ourcommons.ca" + profile_url
-
-                fn = person.find("FirstName")
-                ln = person.find("LastName")
-                first_name = (fn.text or "").strip() if fn is not None else ""
-                last_name = (ln.text or "").strip() if ln is not None else ""
-
-                riding_el = person.find("Constituency")
-                riding = (riding_el.text or "").strip() if riding_el is not None else ""
-
-                caucus_el = person.find("Caucus")
-                if caucus_el is not None:
-                    party = (caucus_el.attrib.get("Abbr") or "").strip()
-
-                province_el = person.find("Province")
-                if province_el is not None:
-                    province = (province_el.attrib.get("Code") or "").strip()
-
-            speaker_name = (f"{first_name} {last_name}").strip() or ""
-
-            oob_el = item.find("OrderOfBusiness")
-            section_label = (oob_el.text or "").strip() if oob_el is not None else "General"
-
-            subject_el = item.find("SubjectOfBusiness")
-            subject = (subject_el.text or "").strip() if subject_el is not None else ""
+        for sob in oob.iter("SubjectOfBusiness"):
+            # Get topic/subject title (may be in Title or Qualifier element)
+            sob_title_el = sob.find("SubjectOfBusinessTitle")
+            subject = (sob_title_el.text or "").strip() if sob_title_el is not None else ""
+            if not subject:
+                sob_qual_el = sob.find("SubjectOfBusinessQualifier")
+                subject = (sob_qual_el.text or "").strip() if sob_qual_el is not None else ""
 
             topics: list[dict] = []
             if subject:
                 topics.append({"title": subject, "id": "", "url": ""})
 
-            hour = item.attrib.get("Hour")
-            minute = item.attrib.get("Minute")
-            time_str = ""
-            if hour is not None and minute is not None:
-                time_str = f"{int(hour):02d}:{int(minute):02d}"
+            for intervention in sob.iter("Intervention"):
+                person_speaking = intervention.find("PersonSpeaking")
+                if person_speaking is None:
+                    continue
 
-            page_ref = item.attrib.get("Page", "")
+                affiliation = person_speaking.find("Affiliation")
+                if affiliation is None:
+                    continue
 
-            speech_text = ""
-            para_texts = item.findall(".//XmlContent//ParaText")
-            if para_texts:
-                parts: list[str] = []
-                for p in para_texts:
-                    text = "".join(p.itertext()).strip()
+                affiliation_text = "".join(affiliation.itertext()).strip()
+                if not affiliation_text:
+                    continue
+
+                member_id = affiliation.attrib.get("DbId", "")
+
+                name, riding, party = _parse_affiliation(affiliation_text)
+                if not name:
+                    continue
+
+                member_url = ""
+                if member_id:
+                    member_url = f"https://www.ourcommons.ca/Parliamentarians/en/members/{member_id}"
+
+                content = intervention.find("Content")
+                if content is None:
+                    continue
+
+                speech_parts: list[str] = []
+                for para in content.iter("ParaText"):
+                    text = "".join(para.itertext()).strip()
                     if text:
-                        parts.append(re.sub(r"\s+", " ", text))
-                speech_text = "\n".join(parts).strip()
+                        speech_parts.append(re.sub(r"\s+", " ", text))
 
-            if not speaker_name or not speech_text:
-                continue
+                speech_text = "\n".join(speech_parts).strip()
+                if not speech_text:
+                    continue
 
-            speeches.append({
-                "speaker_name": speaker_name,
-                "riding": riding,
-                "member_id": person_id,
-                "member_url": profile_url,
-                "party": party,
-                "province": province,
-                "date": item_date,
-                "time": time_str,
-                "page_ref": page_ref,
-                "speech_text": speech_text,
-                "topics": topics,
-                "section": section_label or "General",
-                "order": order,
-            })
-            order += 1
+                # Extract timestamp
+                time_str = ""
+                timestamp = content.find("Timestamp")
+                if timestamp is not None:
+                    hr = timestamp.attrib.get("Hr", "")
+                    mn = timestamp.attrib.get("Mn", "")
+                    if hr and mn:
+                        time_str = f"{int(hr):02d}:{int(mn):02d}"
 
+                speeches.append({
+                    "speaker_name": name,
+                    "riding": riding,
+                    "member_id": member_id,
+                    "member_url": member_url,
+                    "party": party,
+                    "province": "",
+                    "date": sitting_date,
+                    "time": time_str,
+                    "page_ref": "",
+                    "speech_text": speech_text,
+                    "topics": topics,
+                    "section": section_label,
+                    "order": order,
+                })
+                order += 1
+
+    logger.info(f"Static Hansard XML: parsed {len(speeches)} speeches for sitting {sitting_num}")
     return speeches
+
+
+def _parse_affiliation(text: str) -> tuple[str, str, str]:
+    """Parse 'Name (Riding, Party)' from Hansard affiliation text.
+
+    Examples:
+        'Doug Eyolfson (Winnipeg West, Lib.)' -> ('Doug Eyolfson', 'Winnipeg West', 'Lib.')
+        'The Assistant Deputy Speaker (Alexandra Mendès)' -> ('Alexandra Mendès', '', '')
+    """
+    text = text.strip().rstrip(":")
+
+    # Pattern: Name (Riding, Party)
+    match = re.match(r'^(.+?)\s*\(([^,]+),\s*([^)]+)\)\s*$', text)
+    if match:
+        return match.group(1).strip(), match.group(2).strip(), match.group(3).strip()
+
+    # Pattern: Name (Riding) — no party
+    match = re.match(r'^(.+?)\s*\(([^)]+)\)\s*$', text)
+    if match:
+        return match.group(1).strip(), match.group(2).strip(), ""
+
+    # Plain name
+    return text.strip(), "", ""
+
+
