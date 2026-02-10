@@ -33,6 +33,7 @@ PUB_SEARCH_BASE = "https://www.ourcommons.ca/PublicationSearch/en/"
 def _build_http_client() -> httpx.Client:
     return httpx.Client(
         timeout=30,
+        http2=True,
         follow_redirects=True,
         headers={
             "User-Agent": (
@@ -42,8 +43,15 @@ def _build_http_client() -> httpx.Client:
             ),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
             "Accept-Language": "en-CA,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
             "Cache-Control": "no-cache",
             "Pragma": "no-cache",
+            "DNT": "1",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "same-origin",
+            "Sec-Fetch-User": "?1",
             "Referer": "https://www.ourcommons.ca/PublicationSearch/en/",
         },
     )
@@ -80,6 +88,12 @@ def scrape_hansard_for_date(sitting_date: str, hansard_number: str | None = None
     topics_seen = set()
 
     with _build_http_client() as client:
+        # Warm-up request to establish cookies/session (some WAF setups block direct deep links)
+        try:
+            _ = _make_request(client, PUB_SEARCH_BASE, params={"PubType": "37"})
+        except Exception as e:
+            logger.warning(f"Hansard warm-up request failed: {e}")
+
         # Scrape each Order of Business section separately for better categorization
         for oob_key, oob_label in ORDER_OF_BUSINESS.items():
             try:
