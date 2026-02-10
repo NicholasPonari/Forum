@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack --experimental-https",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "create-parliament-bot": "npx tsx scripts/create-parliament-bot.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.1.1",

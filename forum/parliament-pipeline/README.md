@@ -77,5 +77,17 @@ See `.env.example` for the full list. Key variables:
 - `REDIS_URL` - Task queue broker
 - `OPENAI_API_KEY` - LLM summarization
 - `WHISPER_MODEL` - Whisper model size (default: `large-v3`)
-- `SYSTEM_BOT_USER_ID` - Forum bot user ID for posting
+- `SYSTEM_BOT_USER_ID` - Forum bot user UUID for posting (see below)
 - `PIPELINE_API_KEY` - API authentication key
+
+### Creating ParliamentBot (required for publishing)
+
+The pipeline posts debate summaries as a system user. Create it once, then set the returned UUID as `SYSTEM_BOT_USER_ID`:
+
+```bash
+# From the forum directory (with .env.local or env vars set)
+cd forum
+npm run create-parliament-bot
+```
+
+Copy the printed UUID into your pipeline `.env` as `SYSTEM_BOT_USER_ID=<uuid>`. Do not use the literal string `SYSTEM_BOT_USER_ID` — it must be a valid UUID.

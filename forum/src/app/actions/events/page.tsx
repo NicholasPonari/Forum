@@ -149,13 +149,21 @@ export default function EventsPage() {
 
 				<main className="flex-1 max-w-4xl mx-auto py-6 px-4">
 					<div className="mb-6">
-						<Link
-							href="/"
-							className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-2"
-						>
-							<ArrowLeft className="w-4 h-4" />
-							Back to home
-						</Link>
+						<div className="flex items-center gap-4 mb-2">
+							<Link
+								href="/"
+								className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+							>
+								<ArrowLeft className="w-4 h-4" />
+								Back to home
+							</Link>
+							<Link
+								href="/actions/events/test"
+								className="text-sm text-amber-600 hover:text-amber-700"
+							>
+								Test pipeline (YouTube)
+							</Link>
+						</div>
 						<div className="flex items-center gap-3">
 							<div className="flex items-center justify-center w-10 h-10 rounded-lg bg-amber-100 text-amber-700">
 								<Landmark className="w-5 h-5" />

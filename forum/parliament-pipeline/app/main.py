@@ -1,6 +1,9 @@
 """FastAPI application for the Parliament Pipeline service."""
 
 import logging
+import re
+import time
+from datetime import date
 from fastapi import FastAPI, HTTPException, Depends, Header
 from typing import Optional
 
@@ -12,6 +15,7 @@ from app.models import (
     DebateInfo,
     RetriggerRequest,
     HealthResponse,
+    TestDebateRequest,
 )
 from app.utils.supabase_client import get_supabase
 from app.utils.logging import setup_logging
@@ -177,3 +181,59 @@ async def retrigger_debate(
 
     logger.info(f"Re-triggered debate {request.debate_id} from stage {request.from_stage}")
     return {"status": "queued", "debate_id": request.debate_id, "from_stage": request.from_stage}
+
+
+@app.post("/api/test-debate")
+async def create_test_debate(
+    request: TestDebateRequest,
+    _api_key: str = Depends(verify_api_key),
+):
+    """Create a test debate from a YouTube URL and run the full pipeline.
+
+    For local/staging testing only. Creates a debate as if it was just scraped,
+    with the given YouTube URL as the sole media source, then triggers
+    ingest -> transcribe -> process -> summarize -> publish.
+    """
+    from app.tasks.poll_task import trigger_debate_pipeline
+
+    # Basic YouTube URL validation
+    yt_pattern = r"(?:https?://)?(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([a-zA-Z0-9_-]{11})"
+    if not re.search(yt_pattern, request.youtube_url.strip()):
+        raise HTTPException(status_code=400, detail="Invalid YouTube URL")
+
+    supabase = get_supabase()
+
+    # Get legislature CA
+    leg = supabase.table("legislatures").select("id").eq("code", "CA").single().execute()
+    if not leg.data:
+        raise HTTPException(status_code=500, detail="Legislature CA not found")
+
+    legislature_id = leg.data["id"]
+    today = date.today().isoformat()
+    external_id = f"test-yt-{today}-{int(time.time() * 1000)}"
+
+    title = request.title or f"Test debate (YouTube) – {today}"
+
+    row = {
+        "legislature_id": legislature_id,
+        "external_id": external_id,
+        "title": title,
+        "date": today,
+        "session_type": "house",
+        "status": "detected",
+        "video_url": request.youtube_url.strip(),
+        "source_urls": [
+            {"type": "video", "url": request.youtube_url.strip(), "label": "YouTube (test)"},
+        ],
+        "metadata": {"source": "test", "youtube_url": request.youtube_url.strip()},
+    }
+
+    result = supabase.table("debates").insert(row).execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to create debate")
+
+    debate_id = result.data[0]["id"]
+    trigger_debate_pipeline(debate_id, from_stage="detected")
+
+    logger.info(f"Test debate created: {debate_id} from YouTube URL")
+    return {"status": "queued", "debate_id": debate_id, "message": "Pipeline started. Check status on the events page."}

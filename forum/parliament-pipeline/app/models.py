@@ -50,3 +50,9 @@ class HealthResponse(BaseModel):
     redis_connected: bool = False
     supabase_connected: bool = False
     whisper_model_loaded: bool = False
+
+
+class TestDebateRequest(BaseModel):
+    """Request to create a test debate from a YouTube URL."""
+    youtube_url: str
+    title: Optional[str] = None

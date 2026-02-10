@@ -1,5 +1,6 @@
 """Application configuration via pydantic-settings."""
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings
 from typing import Optional
 
@@ -7,9 +8,16 @@ from typing import Optional
 class Settings(BaseSettings):
     """Pipeline configuration loaded from environment variables."""
 
-    # Supabase
-    supabase_url: str
-    supabase_service_key: str
+    # Supabase — accepts SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL (same value as in forum)
+    supabase_url: str = Field(
+        ...,
+        validation_alias=AliasChoices("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL"),
+    )
+    # Accepts SUPABASE_SERVICE_KEY or SUPABASE_SERVICE_ROLE_KEY (same value as in forum)
+    supabase_service_key: str = Field(
+        ...,
+        validation_alias=AliasChoices("SUPABASE_SERVICE_KEY", "SUPABASE_SERVICE_ROLE_KEY"),
+    )
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"
