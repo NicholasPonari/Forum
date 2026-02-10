@@ -4,6 +4,13 @@ import { createClient } from "@supabase/supabase-js";
 const YOUTUBE_URL_REGEX =
 	/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
 
+function normalizeBaseUrl(raw: string) {
+	const trimmed = raw.trim().replace(/\/+$/, "");
+	if (!trimmed) return "";
+	if (/^https?:\/\//i.test(trimmed)) return trimmed;
+	return `https://${trimmed}`;
+}
+
 function createSupabaseAdmin() {
 	const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 	const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -38,7 +45,15 @@ export async function POST(request: NextRequest) {
 
 		// Prefer pipeline endpoint so it creates the debate and queues the job
 		if (pipelineUrl && pipelineApiKey) {
-			const res = await fetch(`${pipelineUrl}/api/test-debate`, {
+			const baseUrl = normalizeBaseUrl(pipelineUrl);
+			if (!baseUrl) {
+				return NextResponse.json(
+					{ error: "PARLIAMENT_PIPELINE_URL is set but empty/invalid." },
+					{ status: 500 }
+				);
+			}
+
+			const res = await fetch(`${baseUrl}/api/test-debate`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
