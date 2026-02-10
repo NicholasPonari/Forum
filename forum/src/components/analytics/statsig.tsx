@@ -4,7 +4,6 @@ import React from "react";
 import { StatsigProvider, useClientAsyncInit } from "@statsig/react-bindings";
 import { StatsigAutoCapturePlugin } from "@statsig/web-analytics";
 import { StatsigSessionReplayPlugin } from "@statsig/session-replay";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MyStatsig({ children }: { children: React.ReactNode }) {
 	const { client } = useClientAsyncInit(
@@ -19,12 +18,7 @@ export default function MyStatsig({ children }: { children: React.ReactNode }) {
 	);
 
 	return (
-		<StatsigProvider
-			client={client}
-			loadingComponent={
-				<Skeleton className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-100"></Skeleton>
-			}
-		>
+		<StatsigProvider client={client}>
 			{children}
 		</StatsigProvider>
 	);
