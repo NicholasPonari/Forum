@@ -50,9 +50,16 @@ export default function ParliamentDebateTestPage() {
 					? { sittingDate: sittingDate.trim(), title: title.trim() || undefined }
 					: { youtubeUrl: youtubeUrl.trim(), title: title.trim() || undefined };
 
+			const headers: Record<string, string> = { "Content-Type": "application/json" };
+			
+			// Add API key for Railway service endpoints
+			if (mode === "hansard") {
+				headers["x-api-key"] = "parliament1234%$";
+			}
+
 			const res = await fetch(endpoint, {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers,
 				body: JSON.stringify(body),
 			});
 			const data = await res.json().catch(() => ({}));
