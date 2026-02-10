@@ -206,6 +206,11 @@ export function RepresentativesInfo({
 											<p className="text-xs text-muted-foreground truncate">
 												{section.politician.party || section.role}
 											</p>
+											{section.politician.salary && (
+												<p className="text-xs text-muted-foreground">
+													${section.politician.salary.toLocaleString()}
+												</p>
+											)}
 
 											{section.politician.email && (
 												<div className="flex items-center pt-1">

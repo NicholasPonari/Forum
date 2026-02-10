@@ -331,4 +331,5 @@ export interface Politician {
   youtube?: string | null;
   address?: string | null;
   phone?: string | null;
+  salary?: number | null;
 }
