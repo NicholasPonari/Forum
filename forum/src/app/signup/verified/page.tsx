@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,6 +34,8 @@ import Link from "next/link";
 import Image from "next/image";
 import LivenessCapture from "@/components/LivenessCapture";
 import IdCapture from "@/components/IdCapture";
+import { ProfileDistricts } from "@/components/ProfileDistricts";
+import { Confetti, type ConfettiRef } from "@/components/magicui/confetti";
 
 type IdType = "passport" | "drivers_license" | "medical_card" | null;
 type IdCaptureMethod = "upload" | "camera" | null;
@@ -129,6 +131,8 @@ function VerifiedSignUpPageContent() {
 		address_city?: string | null;
 		address_postal?: string | null;
 	} | null>(null);
+	const [verifiedUserId, setVerifiedUserId] = useState<string | null>(null);
+	const confettiRef = useRef<ConfettiRef>(null);
 
 	const { user, setSession } = useAuth();
 	const supabase = createClient();
@@ -142,6 +146,16 @@ function VerifiedSignUpPageContent() {
 		() => createSignUpSchema(isUpgrade),
 		[isUpgrade]
 	);
+
+	React.useEffect(() => {
+		if (step === 6 && confettiRef.current) {
+			confettiRef.current.fire({
+				particleCount: 100,
+				spread: 70,
+				origin: { y: 0.6 },
+			});
+		}
+	}, [step]);
 
 	const {
 		register,
@@ -359,6 +373,7 @@ function VerifiedSignUpPageContent() {
 					setVerificationStep("form");
 					return;
 				}
+				setVerifiedUserId(userId);
 			} else {
 				const { error, data: sessionData } = await supabase.auth.signUp({
 					email: data.email,
@@ -406,6 +421,7 @@ function VerifiedSignUpPageContent() {
 				}
 
 				setSession(sessionData.session);
+				setVerifiedUserId(userId);
 			}
 
 			// Fire-and-forget cleanup of uploaded verification images
@@ -1019,88 +1035,114 @@ function VerifiedSignUpPageContent() {
 			case 6:
 				// Success state with identity card
 				return (
-					<div className="flex flex-col items-center text-center space-y-6">
-						<div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
-							<CheckCircle2 className="w-10 h-10 text-green-600" />
+					<div className="bg-background relative flex flex-col items-center text-center space-y-8 animate-in fade-in duration-700 min-h-screen">
+						<Confetti
+							ref={confettiRef}
+							className="absolute top-0 left-0 z-0 size-full"
+							manualstart
+						/>
+						<div className="flex flex-col items-center space-y-4 relative z-10">
+							<div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center animate-bounce">
+								<CheckCircle2 className="w-12 h-12 text-green-600" />
+							</div>
+							<h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
+								Verification Successful!
+							</h1>
+							<p className="text-xl text-gray-600 max-w-2xl">
+								Welcome to Vox.Vote! Your identity has been verified and your
+								voice counts.
+							</p>
 						</div>
-						<h1 className="text-3xl font-bold text-gray-900">
-							Verification Successful!
-						</h1>
-						<p className="text-lg text-gray-600 max-w-2xl">
-							Welcome to Vox.Vote! Your identity has been verified.
-						</p>
 
-						{/* Identity Card */}
-						{ocrData && (
-							<div className="bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-2xl p-8 max-w-md w-full text-white relative overflow-hidden">
-								<div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
-								<div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12" />
+						<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-5xl px-4 relative z-10">
+							{/* Left Column: Identity Card & Privacy */}
+							<div className="flex flex-col gap-6 items-center lg:items-end">
+								{/* Identity Card */}
+								{ocrData && (
+									<div className="bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-2xl p-8 max-w-md w-full text-white relative overflow-hidden transform hover:scale-105 transition-transform duration-300">
+										<div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
+										<div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12" />
 
-								<div className="relative z-10">
-									<div className="flex items-center justify-between mb-6">
-										<h2 className="text-xl font-bold">Verified Resident</h2>
-										<BadgeCheck className="w-8 h-8" />
-									</div>
+										<div className="relative z-10">
+											<div className="flex items-center justify-between mb-6">
+												<h2 className="text-xl font-bold">Verified Resident</h2>
+												<BadgeCheck className="w-8 h-8" />
+											</div>
 
-									<div className="space-y-4 text-left">
-										<div>
-											<p className="text-white/70 text-sm">Name</p>
-											<p className="text-2xl font-bold">
-												{ocrData.first_name} {ocrData.last_name?.charAt(0)}.
-											</p>
-										</div>
+											<div className="space-y-4 text-left">
+												<div>
+													<p className="text-white/70 text-sm">Name</p>
+													<p className="text-2xl font-bold">
+														{ocrData.first_name}{" "}
+														{ocrData.last_name?.charAt(0)}.
+													</p>
+												</div>
 
-										<div>
-											<p className="text-white/70 text-sm">Status</p>
-											<div className="flex items-center gap-2">
-												<div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-												<p className="text-lg font-semibold">Verified</p>
+												<div>
+													<p className="text-white/70 text-sm">Status</p>
+													<div className="flex items-center gap-2">
+														<div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+														<p className="text-lg font-semibold">Verified</p>
+													</div>
+												</div>
 											</div>
 										</div>
 									</div>
+								)}
+
+								{/* Privacy Disclosure */}
+								<div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md w-full text-left">
+									<h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+										<Lock className="w-4 h-4" />
+										Privacy Verified
+									</h3>
+									<ul className="space-y-2 text-gray-700 text-sm">
+										<li className="flex items-start gap-2">
+											<CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+											<span>
+												Only your first name and last initial are visible
+											</span>
+										</li>
+										<li className="flex items-start gap-2">
+											<CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+											<span>Your exact address is never shared</span>
+										</li>
+										<li className="flex items-start gap-2">
+											<CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+											<span>Verification photos permanently deleted</span>
+										</li>
+									</ul>
 								</div>
 							</div>
-						)}
 
-						{/* Privacy Disclosure */}
-						<div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-2xl">
-							<h3 className="font-semibold text-blue-900 mb-3 flex items-center justify-center gap-2">
-								<Lock className="w-5 h-5" />
-								Your Privacy
-							</h3>
-							<ul className="text-left space-y-2 text-gray-700 text-sm">
-								<li className="flex items-start gap-2">
-									<CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-									<span>
-										<strong>
-											On the website, only your first name and the first letter
-											of your last name will be displayed
-										</strong>{" "}
-										(e.g., &quot;John D.&quot;)
-									</span>
-								</li>
-								<li className="flex items-start gap-2">
-									<CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-									<span>
-										Your address is never stored - only your general location is
-										used to show relevant local content
-									</span>
-								</li>
-								<li className="flex items-start gap-2">
-									<CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-									<span>
-										All verification photos have been permanently deleted
-									</span>
-								</li>
-							</ul>
+							{/* Right Column: Districts & Officials */}
+							<div className="flex flex-col gap-6 items-center lg:items-start w-full">
+								{verifiedUserId && (
+									<div className="w-full max-w-md animate-in slide-in-from-right-8 duration-700 delay-300">
+										<div className="mb-4 text-left">
+											<h3 className="text-xl font-bold text-gray-900 mb-1">
+												Your Elected Officials
+											</h3>
+											<p className="text-gray-600 text-sm">
+												We&apos;ve automatically identified your local
+												representatives based on your address.
+											</p>
+										</div>
+										<ProfileDistricts
+											profileId={verifiedUserId}
+											className="border-0 shadow-xl bg-white/50 backdrop-blur-sm"
+										/>
+									</div>
+								)}
+							</div>
 						</div>
 
 						<Button
 							onClick={() => router.push(returnTo)}
 							size="lg"
-							className="mt-8 px-8 py-6 text-lg"
+							className="mt-8 px-12 py-6 text-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 relative z-10"
 						>
-							Continue
+							Enter Community
 						</Button>
 					</div>
 				);
