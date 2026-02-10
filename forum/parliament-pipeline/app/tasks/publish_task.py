@@ -79,12 +79,35 @@ def publish_debate(self, debate_id: str) -> str:
         )
         votes = votes_result.data or []
 
+        # Get debate topics (from Hansard scrape)
+        topics_result = (
+            supabase.table("debate_topics")
+            .select("*")
+            .eq("debate_id", debate_id)
+            .order("sequence_order")
+            .execute()
+        )
+        debate_topics = topics_result.data or []
+
+        # Get top contributions for key quotes
+        contrib_result = (
+            supabase.table("debate_contributions")
+            .select("*")
+            .eq("debate_id", debate_id)
+            .order("sequence_order")
+            .limit(100)
+            .execute()
+        )
+        contributions = contrib_result.data or []
+
         # Render the HTML post
         post_html = render_debate_post(
             debate=debate,
             en_summary=en_summary,
             fr_summary=fr_summary,
             votes=votes,
+            debate_topics=debate_topics,
+            contributions=contributions,
         )
 
         # Publish to forum

@@ -32,10 +32,30 @@ const SESSION_TYPE_LABELS: Record<string, string> = {
 
 const STATUS_STYLES: Record<string, string> = {
 	published: "bg-green-100 text-green-700",
+	publishing: "bg-green-100 text-green-600",
+	summarizing: "bg-blue-100 text-blue-700",
+	categorizing: "bg-blue-100 text-blue-700",
 	processing: "bg-blue-100 text-blue-700",
+	scraping_hansard: "bg-indigo-100 text-indigo-700",
 	transcribing: "bg-yellow-100 text-yellow-700",
+	ingesting: "bg-yellow-100 text-yellow-600",
 	detected: "bg-gray-100 text-gray-600",
+	scheduled: "bg-purple-100 text-purple-700",
 	error: "bg-red-100 text-red-700",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+	published: "Published",
+	publishing: "Publishing",
+	summarizing: "Summarizing",
+	categorizing: "Categorizing",
+	processing: "Processing",
+	scraping_hansard: "Scraping Hansard",
+	transcribing: "Transcribing",
+	ingesting: "Ingesting",
+	detected: "Detected",
+	scheduled: "Scheduled",
+	error: "Error",
 };
 
 interface DebateWithLegislature extends Debate {
@@ -241,7 +261,7 @@ export default function EventsPage() {
 													STATUS_STYLES[debate.status] || "bg-gray-100 text-gray-600"
 												)}
 											>
-												{debate.status}
+												{STATUS_LABELS[debate.status] || debate.status}
 											</Badge>
 										</div>
 

@@ -57,6 +57,7 @@ def categorize_debate(
     debate: dict[str, Any],
     transcripts: list[dict[str, Any]],
     en_summary: dict[str, Any],
+    contributions: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Categorize a debate into forum topic categories.
 
@@ -68,7 +69,7 @@ def categorize_debate(
         List of category dicts with topic_slug, confidence, is_primary.
     """
     # Step 1: Keyword-based pre-classification
-    keyword_scores = _keyword_classify(transcripts, en_summary)
+    keyword_scores = _keyword_classify(transcripts, en_summary, contributions)
 
     # Step 2: LLM-based classification
     llm_categories = _llm_classify(debate, en_summary)
@@ -86,13 +87,20 @@ def categorize_debate(
 def _keyword_classify(
     transcripts: list[dict],
     en_summary: dict,
+    contributions: list[dict] | None = None,
 ) -> dict[str, float]:
-    """Score topics based on keyword frequency in transcript and summary."""
+    """Score topics based on keyword frequency in transcript/contributions and summary."""
     # Build text corpus
     text = en_summary.get("summary_text", "").lower()
     for t in transcripts:
         raw = t.get("raw_text", "")
         text += " " + raw[:20_000].lower()
+
+    # For Hansard-first debates, use contribution text as source
+    if contributions:
+        for c in contributions[:100]:
+            contrib_text = c.get("text", "")
+            text += " " + contrib_text[:500].lower()
 
     scores: dict[str, float] = {}
 

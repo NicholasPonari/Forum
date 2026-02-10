@@ -59,6 +59,7 @@ from app.models import (
     RetriggerRequest,
     HealthResponse,
     TestDebateRequest,
+    TestHansardRequest,
 )
 from app.utils.supabase_client import get_supabase
 from app.utils.logging import setup_logging
@@ -221,10 +222,20 @@ async def retrigger_debate(
     }).eq("id", request.debate_id).execute()
 
     # Re-trigger the pipeline
-    trigger_debate_pipeline(request.debate_id, from_stage=request.from_stage)
+    trigger_debate_pipeline(
+        request.debate_id,
+        from_stage=request.from_stage,
+        hansard_first=request.hansard_first,
+    )
 
-    logger.info(f"Re-triggered debate {request.debate_id} from stage {request.from_stage}")
-    return {"status": "queued", "debate_id": request.debate_id, "from_stage": request.from_stage}
+    pipeline_type = "hansard-first" if request.hansard_first else "legacy-video"
+    logger.info(f"Re-triggered debate {request.debate_id} from stage {request.from_stage} ({pipeline_type})")
+    return {
+        "status": "queued",
+        "debate_id": request.debate_id,
+        "from_stage": request.from_stage,
+        "pipeline": pipeline_type,
+    }
 
 
 @app.post("/api/test-debate")
@@ -277,7 +288,75 @@ async def create_test_debate(
         raise HTTPException(status_code=500, detail="Failed to create debate")
 
     debate_id = result.data[0]["id"]
-    trigger_debate_pipeline(debate_id, from_stage="detected")
+    trigger_debate_pipeline(debate_id, from_stage="detected", hansard_first=False)
 
     logger.info(f"Test debate created: {debate_id} from YouTube URL")
-    return {"status": "queued", "debate_id": debate_id, "message": "Pipeline started. Check status on the events page."}
+    return {"status": "queued", "debate_id": debate_id, "message": "Pipeline started (legacy video). Check status on the events page."}
+
+
+@app.post("/api/test-hansard")
+async def create_test_hansard_debate(
+    request: TestHansardRequest,
+    _api_key: str = Depends(verify_api_key),
+):
+    """Test the Hansard-first pipeline for a specific sitting date.
+
+    Creates a debate record for the given date and triggers:
+    scrape_hansard -> process -> summarize -> publish.
+
+    No video download or Whisper — uses the official Hansard transcript directly.
+    """
+    from app.tasks.poll_task import trigger_debate_pipeline
+
+    # Validate date format
+    try:
+        sitting_date = date.fromisoformat(request.sitting_date.strip())
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+
+    supabase = get_supabase()
+
+    # Get legislature CA
+    leg = supabase.table("legislatures").select("id").eq("code", "CA").single().execute()
+    if not leg.data:
+        raise HTTPException(status_code=500, detail="Legislature CA not found")
+
+    legislature_id = leg.data["id"]
+    date_str = sitting_date.isoformat()
+    external_id = f"test-hansard-{date_str}-{int(time.time() * 1000)}"
+
+    title = request.title or f"House of Commons Debate — {date_str}"
+
+    hansard_url = f"https://www.ourcommons.ca/DocumentViewer/en/house/{date_str}/hansard"
+
+    row = {
+        "legislature_id": legislature_id,
+        "external_id": external_id,
+        "title": title,
+        "date": date_str,
+        "session_type": "house",
+        "status": "detected",
+        "hansard_url": hansard_url,
+        "source_urls": [
+            {"type": "hansard", "url": hansard_url, "label": "Official Hansard"},
+        ],
+        "metadata": {
+            "source": "test-hansard",
+            "scrape_method": "hansard-first",
+        },
+    }
+
+    result = supabase.table("debates").insert(row).execute()
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to create debate")
+
+    debate_id = result.data[0]["id"]
+    trigger_debate_pipeline(debate_id, from_stage="detected", hansard_first=True)
+
+    logger.info(f"Test Hansard debate created: {debate_id} for {date_str}")
+    return {
+        "status": "queued",
+        "debate_id": debate_id,
+        "sitting_date": date_str,
+        "message": "Hansard-first pipeline started. Check status on the events page.",
+    }

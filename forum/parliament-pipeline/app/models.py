@@ -42,6 +42,7 @@ class RetriggerRequest(BaseModel):
     """Request to re-trigger processing for a debate."""
     debate_id: str
     from_stage: str = "detected"  # Reset to this status and reprocess
+    hansard_first: bool = True     # Use Hansard-first pipeline (default for federal)
 
 
 class HealthResponse(BaseModel):
@@ -49,10 +50,15 @@ class HealthResponse(BaseModel):
     status: str = "ok"
     redis_connected: bool = False
     supabase_connected: bool = False
-    whisper_model_loaded: bool = False
 
 
 class TestDebateRequest(BaseModel):
     """Request to create a test debate from a YouTube URL."""
     youtube_url: str
+    title: Optional[str] = None
+
+
+class TestHansardRequest(BaseModel):
+    """Request to test the Hansard-first pipeline for a specific sitting date."""
+    sitting_date: str   # YYYY-MM-DD
     title: Optional[str] = None

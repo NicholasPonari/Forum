@@ -150,6 +150,7 @@ export interface Comment {
 export type DebateStatus =
   | 'scheduled'
   | 'detected'
+  | 'scraping_hansard'
   | 'ingesting'
   | 'transcribing'
   | 'processing'

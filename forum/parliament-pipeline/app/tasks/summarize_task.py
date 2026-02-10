@@ -37,7 +37,7 @@ def summarize_debate(self, debate_id: str) -> str:
         )
         debate = debate_result.data
 
-        # Get transcripts
+        # Get transcripts (may be empty for Hansard-first debates)
         transcript_result = (
             supabase.table("debate_transcripts")
             .select("*")
@@ -45,6 +45,16 @@ def summarize_debate(self, debate_id: str) -> str:
             .execute()
         )
         transcripts = transcript_result.data or []
+
+        # Get debate topics (from Hansard scrape)
+        topics_result = (
+            supabase.table("debate_topics")
+            .select("*")
+            .eq("debate_id", debate_id)
+            .order("sequence_order")
+            .execute()
+        )
+        debate_topics = topics_result.data or []
 
         # Get contributions (with speaker info)
         contributions_result = (
@@ -72,6 +82,7 @@ def summarize_debate(self, debate_id: str) -> str:
             contributions=contributions,
             votes=votes,
             language="en",
+            debate_topics=debate_topics,
         )
         supabase.table("debate_summaries").upsert({
             "debate_id": debate_id,
@@ -90,6 +101,7 @@ def summarize_debate(self, debate_id: str) -> str:
             contributions=contributions,
             votes=votes,
             language="fr",
+            debate_topics=debate_topics,
         )
         supabase.table("debate_summaries").upsert({
             "debate_id": debate_id,
@@ -106,6 +118,7 @@ def summarize_debate(self, debate_id: str) -> str:
         categories = categorize_debate(
             debate=debate,
             transcripts=transcripts,
+            contributions=contributions,
             en_summary=en_summary,
         )
 

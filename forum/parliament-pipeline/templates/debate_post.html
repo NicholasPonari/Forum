@@ -40,6 +40,23 @@
   </ul>
   {% endif %}
 
+  <!-- Topics Discussed (from Hansard scrape) -->
+  {% if topic_sections %}
+  <h2 style="font-size: 18px; font-weight: 700; margin: 20px 0 8px 0; color: #111827;">Topics Discussed</h2>
+  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
+    {% for topic in topic_sections %}
+    <div style="padding: 8px 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px;">
+      <strong style="color: #111827;">{{ topic.title }}</strong>
+      <br>
+      <span style="color: #6b7280;">
+        {{ topic.section }} &bull; {{ topic.speech_count }} speeches &bull; {{ topic.speaker_count }} speakers
+        {% if topic.parties %} &bull; {{ topic.parties | join(', ') }}{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <!-- Key Issues -->
   {% if key_issues %}
   <h2 style="font-size: 18px; font-weight: 700; margin: 20px 0 8px 0; color: #111827;">Key Issues Raised</h2>
@@ -53,6 +70,25 @@
     </li>
     {% endfor %}
   </ul>
+  {% endif %}
+
+  <!-- Key Quotes (from Hansard contributions) -->
+  {% if key_quotes %}
+  <h2 style="font-size: 18px; font-weight: 700; margin: 20px 0 8px 0; color: #111827;">What They Said</h2>
+  {% for quote in key_quotes %}
+  <div style="padding: 12px 16px; margin-bottom: 12px; border-left: 3px solid #6366f1; background: #f9fafb; border-radius: 0 8px 8px 0;">
+    <div style="font-size: 14px; color: #374151; font-style: italic; margin-bottom: 6px;">
+      &ldquo;{{ quote.text }}&rdquo;
+    </div>
+    <div style="font-size: 13px; color: #6b7280;">
+      &mdash; <strong>{{ quote.speaker_name }}</strong>
+      {% if quote.party or quote.riding %}
+      ({% if quote.party %}{{ quote.party }}{% endif %}{% if quote.party and quote.riding %}, {% endif %}{% if quote.riding %}{{ quote.riding }}{% endif %})
+      {% endif %}
+      {% if quote.section %}<span style="color: #9ca3af;">&bull; {{ quote.section }}</span>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
   {% endif %}
 
   <!-- Outcome -->

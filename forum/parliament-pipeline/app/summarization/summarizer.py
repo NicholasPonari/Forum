@@ -23,15 +23,17 @@ def generate_summary(
     contributions: list[dict[str, Any]],
     votes: list[dict[str, Any]],
     language: str = "en",
+    debate_topics: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Generate a layperson-friendly summary of a debate.
 
     Args:
         debate: Debate record with metadata.
-        transcripts: Transcript records.
+        transcripts: Transcript records (may be empty for Hansard-first debates).
         contributions: Contribution records (with speaker info).
         votes: Vote records.
         language: Target language ('en' or 'fr').
+        debate_topics: Topic sections from Hansard scrape (optional).
 
     Returns:
         Dict with summary_text, key_participants, key_issues, outcome_text, model.
@@ -39,7 +41,7 @@ def generate_summary(
     client = OpenAI(api_key=settings.openai_api_key)
 
     # Build context for the LLM
-    context = _build_context(debate, transcripts, contributions, votes)
+    context = _build_context(debate, transcripts, contributions, votes, debate_topics)
 
     # System prompt
     if language == "fr":
@@ -164,11 +166,13 @@ def _build_context(
     transcripts: list[dict],
     contributions: list[dict],
     votes: list[dict],
+    debate_topics: list[dict] | None = None,
 ) -> dict:
     """Build a context dict for the LLM prompt."""
     legislature = debate.get("legislatures", {})
 
     # Prepare transcript text (truncated if needed)
+    # For Hansard-first debates, transcripts may be empty — contributions are the source
     transcript_text = ""
     for t in transcripts:
         raw = t.get("raw_text", "")
@@ -178,12 +182,49 @@ def _build_context(
 
     # Prepare speaker contributions summary
     speaker_summaries = []
-    for c in contributions[:50]:  # Limit to first 50 contributions
+    for c in contributions[:80]:  # Increased limit for Hansard-first (richer data)
         speaker_info = c.get("debate_speakers") or {}
-        speaker_name = speaker_info.get("name", c.get("speaker_name_raw", "Unknown"))
-        party = speaker_info.get("party", "")
-        text_preview = c.get("text", "")[:300]
-        speaker_summaries.append(f"[{speaker_name} ({party})]: {text_preview}")
+        metadata = c.get("metadata") or {}
+        speaker_name = (
+            speaker_info.get("name")
+            or c.get("speaker_name")
+            or c.get("speaker_name_raw", "Unknown")
+        )
+        party = (
+            speaker_info.get("party")
+            or metadata.get("party", "")
+        )
+        riding = (
+            speaker_info.get("riding")
+            or metadata.get("riding", "")
+        )
+        section = metadata.get("section", "")
+        text_preview = c.get("text", "")[:400]
+
+        label = f"[{speaker_name}"
+        if party:
+            label += f" ({party}"
+            if riding:
+                label += f", {riding}"
+            label += ")"
+        label += "]"
+        if section:
+            label += f" ({section})"
+
+        speaker_summaries.append(f"{label}: {text_preview}")
+
+    # Prepare topic sections summary (from Hansard scrape)
+    topic_summaries = []
+    if debate_topics:
+        for topic in debate_topics:
+            parties = ", ".join(topic.get("parties_involved", []))
+            topic_summaries.append(
+                f"- {topic.get('topic_title', 'Unknown')} "
+                f"({topic.get('section', '')}, "
+                f"{topic.get('speech_count', 0)} speeches, "
+                f"{topic.get('speaker_count', 0)} speakers, "
+                f"parties: {parties})"
+            )
 
     # Prepare vote info
     vote_summaries = []
@@ -202,6 +243,7 @@ def _build_context(
         "session_type": debate.get("session_type", ""),
         "transcript_text": transcript_text,
         "speaker_summaries": speaker_summaries,
+        "topic_summaries": topic_summaries,
         "vote_summaries": vote_summaries,
     }
 
@@ -221,9 +263,14 @@ def _build_user_prompt(context: dict, language: str) -> str:
         for v in context['vote_summaries']:
             parts.append(f"- {v}")
 
+    if context.get('topic_summaries'):
+        parts.append(f"\n## Topics Discussed")
+        for t in context['topic_summaries']:
+            parts.append(t)
+
     if context['speaker_summaries']:
         parts.append(f"\n## Key Speaker Contributions (first {len(context['speaker_summaries'])})")
-        for s in context['speaker_summaries'][:30]:
+        for s in context['speaker_summaries'][:50]:
             parts.append(s)
 
     if context['transcript_text']:

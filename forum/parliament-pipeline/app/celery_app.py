@@ -24,6 +24,7 @@ celery.conf.update(
     # Task routes
     task_routes={
         "app.tasks.poll_task.*": {"queue": "polling"},
+        "app.tasks.scrape_hansard_task.*": {"queue": "processing"},
         "app.tasks.ingest_task.*": {"queue": "ingestion"},
         "app.tasks.transcribe_task.*": {"queue": "transcription"},
         "app.tasks.process_task.*": {"queue": "processing"},
