@@ -42,7 +42,9 @@ export default function ParliamentDebateTestPage() {
 		setLoading(true);
 		try {
 			const endpoint =
-				mode === "hansard" ? "/api/debates/test-hansard" : "/api/debates/test";
+				mode === "hansard"
+					? "https://parliament-pipeline-production.up.railway.app/api/test-hansard"
+					: "/api/debates/test";
 			const body =
 				mode === "hansard"
 					? { sittingDate: sittingDate.trim(), title: title.trim() || undefined }
