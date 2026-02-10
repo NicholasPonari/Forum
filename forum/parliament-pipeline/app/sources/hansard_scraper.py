@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 PUB_SEARCH_BASE = "https://www.ourcommons.ca/PublicationSearch/en/"
 
 # XML feed endpoint (documented under ourcommons.ca Open Data -> Publications Search)
-PUB_SEARCH_XML = "https://www.ourcommons.ca/Parliamentarians/en/PublicationSearch"
+PUB_SEARCH_XML = PUB_SEARCH_BASE
 
 
 def _build_http_client() -> httpx.Client:
@@ -572,6 +572,16 @@ def _parse_speaker_riding(text: str) -> tuple[str, str]:
 def _make_request(client: httpx.Client, url: str, params: dict[str, str] | None = None) -> httpx.Response:
     """Make an HTTP request with standard headers."""
     response = client.get(url, params=params)
+    if response.status_code == 403:
+        # Some edge/WAF configurations appear to block our http2 client fingerprint.
+        # Retry once with HTTP/1.1 while keeping the same headers.
+        with httpx.Client(
+            timeout=client.timeout,
+            http2=False,
+            follow_redirects=True,
+            headers=dict(client.headers),
+        ) as http1_client:
+            response = http1_client.get(url, params=params)
     response.raise_for_status()
     return response
 
@@ -579,7 +589,7 @@ def _make_request(client: httpx.Client, url: str, params: dict[str, str] | None 
 def _scrape_from_publication_search_xml(client: httpx.Client, sitting_date: str) -> list[dict]:
     params = {
         "PubType": "37",
-        "View": "L",
+        "View": "D",
         "xml": "1",
         "RPP": "1000",
         "Page": "1",
