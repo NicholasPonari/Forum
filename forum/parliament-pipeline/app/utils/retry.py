@@ -21,8 +21,18 @@ def mark_debate_error(debate_id: str, error_message: str):
     """Mark a debate as errored and increment retry count."""
     supabase = get_supabase()
     # Get current retry count
-    result = supabase.table("debates").select("retry_count").eq("id", debate_id).single().execute()
-    current_retries = (result.data or {}).get("retry_count", 0)
+    result = (
+        supabase.table("debates")
+        .select("retry_count")
+        .eq("id", debate_id)
+        .limit(1)
+        .execute()
+    )
+    row = (result.data or [None])[0] if isinstance(result.data, list) else result.data
+    if not row:
+        logger.error(f"Debate {debate_id} not found while marking error: {error_message}")
+        return False
+    current_retries = (row or {}).get("retry_count", 0)
 
     if current_retries >= settings.max_retries:
         supabase.table("debates").update({

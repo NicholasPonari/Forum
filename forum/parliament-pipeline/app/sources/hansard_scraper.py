@@ -29,6 +29,25 @@ logger = logging.getLogger(__name__)
 # Publication Search base URL
 PUB_SEARCH_BASE = "https://www.ourcommons.ca/PublicationSearch/en/"
 
+
+def _build_http_client() -> httpx.Client:
+    return httpx.Client(
+        timeout=30,
+        follow_redirects=True,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/121.0.0.0 Safari/537.36"
+            ),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-CA,en;q=0.9",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
+            "Referer": "https://www.ourcommons.ca/PublicationSearch/en/",
+        },
+    )
+
 # Order of Business sections — used to categorize speeches
 ORDER_OF_BUSINESS = {
     "GovernmentOrders": "Government Orders",
@@ -60,21 +79,22 @@ def scrape_hansard_for_date(sitting_date: str, hansard_number: str | None = None
     all_speeches = []
     topics_seen = set()
 
-    # Scrape each Order of Business section separately for better categorization
-    for oob_key, oob_label in ORDER_OF_BUSINESS.items():
-        try:
-            section_speeches = _scrape_section(sitting_date, oob_key, oob_label)
-            all_speeches.extend(section_speeches)
-            for s in section_speeches:
-                for t in s.get("topics", []):
-                    topics_seen.add(t["title"])
-        except Exception as e:
-            logger.warning(f"Error scraping {oob_label} for {sitting_date}: {e}")
+    with _build_http_client() as client:
+        # Scrape each Order of Business section separately for better categorization
+        for oob_key, oob_label in ORDER_OF_BUSINESS.items():
+            try:
+                section_speeches = _scrape_section(client, sitting_date, oob_key, oob_label)
+                all_speeches.extend(section_speeches)
+                for s in section_speeches:
+                    for t in s.get("topics", []):
+                        topics_seen.add(t["title"])
+            except Exception as e:
+                logger.warning(f"Error scraping {oob_label} for {sitting_date}: {e}")
 
-    # If section-based scrape got nothing, try a broad scrape
-    if not all_speeches:
-        logger.info(f"Section scrape empty, trying broad scrape for {sitting_date}")
-        all_speeches = _scrape_broad(sitting_date)
+        # If section-based scrape got nothing, try a broad scrape
+        if not all_speeches:
+            logger.info(f"Section scrape empty, trying broad scrape for {sitting_date}")
+            all_speeches = _scrape_broad(client, sitting_date)
 
     # Group speeches by topic/bill
     sections = _group_speeches_by_topic(all_speeches)
@@ -97,7 +117,7 @@ def scrape_hansard_for_date(sitting_date: str, hansard_number: str | None = None
     }
 
 
-def _scrape_section(sitting_date: str, oob_key: str, oob_label: str) -> list[dict]:
+def _scrape_section(client: httpx.Client, sitting_date: str, oob_key: str, oob_label: str) -> list[dict]:
     """Scrape speeches from a specific Order of Business section."""
     # Build URL: filter by PubType=37 (Hansard), current session, section, 100 per page
     params = {
@@ -115,10 +135,9 @@ def _scrape_section(sitting_date: str, oob_key: str, oob_label: str) -> list[dic
 
     while True:
         params["Page"] = str(page)
-        url = PUB_SEARCH_BASE + "?" + "&".join(f"{k}={v}" for k, v in params.items())
 
         try:
-            response = _make_request(url)
+            response = _make_request(client, PUB_SEARCH_BASE, params=params)
         except Exception as e:
             logger.warning(f"Failed to fetch {oob_label} page {page}: {e}")
             break
@@ -145,7 +164,7 @@ def _scrape_section(sitting_date: str, oob_key: str, oob_label: str) -> list[dic
     return speeches
 
 
-def _scrape_broad(sitting_date: str) -> list[dict]:
+def _scrape_broad(client: httpx.Client, sitting_date: str) -> list[dict]:
     """Broad scrape of all Hansard speeches for a date (no section filter)."""
     params = {
         "View": "D",
@@ -161,10 +180,9 @@ def _scrape_broad(sitting_date: str) -> list[dict]:
 
     while True:
         params["Page"] = str(page)
-        url = PUB_SEARCH_BASE + "?" + "&".join(f"{k}={v}" for k, v in params.items())
 
         try:
-            response = _make_request(url)
+            response = _make_request(client, PUB_SEARCH_BASE, params=params)
         except Exception:
             break
 
@@ -521,11 +539,8 @@ def _parse_speaker_riding(text: str) -> tuple[str, str]:
     return text.strip(), ""
 
 
-def _make_request(url: str) -> httpx.Response:
+def _make_request(client: httpx.Client, url: str, params: dict[str, str] | None = None) -> httpx.Response:
     """Make an HTTP request with standard headers."""
-    with httpx.Client(timeout=30, follow_redirects=True) as client:
-        response = client.get(url, headers={
-            "User-Agent": "Vox.Vote Parliament Tracker/1.0 (civic engagement platform)",
-        })
-        response.raise_for_status()
-        return response
+    response = client.get(url, params=params)
+    response.raise_for_status()
+    return response

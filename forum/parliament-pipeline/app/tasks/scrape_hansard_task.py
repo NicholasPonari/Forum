@@ -42,10 +42,10 @@ def scrape_hansard(self, debate_id: str) -> str:
             supabase.table("debates")
             .select("*, legislatures(*)")
             .eq("id", debate_id)
-            .single()
+            .limit(1)
             .execute()
         )
-        debate = debate_result.data
+        debate = (debate_result.data or [None])[0] if isinstance(debate_result.data, list) else debate_result.data
         if not debate:
             raise ValueError(f"Debate not found: {debate_id}")
 
