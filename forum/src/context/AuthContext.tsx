@@ -38,11 +38,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 		inFlight: boolean;
 		lastStartedAt: number;
 	}>({ userId: null, inFlight: false, lastStartedAt: 0 });
+	const isMountedRef = useRef(true);
 
 	// Check if user is a "Member" type (has restrictions)
 	const isMember = profile?.type?.toLowerCase() === "member";
 
-	const fetchProfile = async (userId: string, timeoutMs: number = 15000) => {
+	const fetchProfile = async (userId: string, timeoutMs: number = 15000, isMountedRef?: React.MutableRefObject<boolean>) => {
 		const now = Date.now();
 		const guard = profileFetchGuardRef.current;
 		if (guard.inFlight && guard.userId === userId) {
@@ -138,7 +139,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 						: rawData.provincial_districts,
 				};
 
-				setProfile(profileData);
+				if (!isMountedRef || isMountedRef.current) {
+					setProfile(profileData);
+				}
 			}
 		} catch (err) {
 		} finally {
@@ -151,12 +154,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 	const refreshProfile = async () => {
 		if (user?.id) {
-			await fetchProfile(user.id);
+			await fetchProfile(user.id, 15000, isMountedRef);
 		}
 	};
 
 	useEffect(() => {
-		let isMounted = true;
+		const isMounted = true;
+		isMountedRef.current = true;
 
 		const loadSession = async () => {
 			try {
@@ -171,17 +175,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 				if (error) {
 				}
 
-				if (!isMounted) {
+				if (!isMountedRef.current) {
 					return;
 				}
 
 				setSession(data.session);
 				setUser(data.session?.user ?? null);
 				if (data.session?.user?.id) {
-					await fetchProfile(data.session.user.id);
+					await fetchProfile(data.session.user.id, 15000, isMountedRef);
 				}
 			} catch (error) {
-				if (!isMounted) return;
+				if (!isMountedRef.current) return;
 				if (error instanceof Error && error.message === "getSession timeout") {
 					return;
 				}
@@ -189,7 +193,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 				setUser(null);
 				setProfile(null);
 			} finally {
-				if (isMounted) {
+				if (isMountedRef.current) {
 					setLoading(false);
 				}
 			}
@@ -199,23 +203,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 		const { data: listener } = supabase.auth.onAuthStateChange(
 			async (event, nextSession) => {
+				if (!isMountedRef.current) return;
 				try {
 					setSession(nextSession);
 					setUser(nextSession?.user ?? null);
 					if (nextSession?.user?.id) {
-						await fetchProfile(nextSession.user.id);
+						await fetchProfile(nextSession.user.id, 15000, isMountedRef);
 					} else {
 						setProfile(null);
 					}
 				} catch (error) {
 				} finally {
-					setLoading(false);
+					if (isMountedRef.current) {
+						setLoading(false);
+					}
 				}
 			}
 		);
 
 		return () => {
-			isMounted = false;
+			isMountedRef.current = false;
 			listener.subscription.unsubscribe();
 		};
 	}, [supabase]);

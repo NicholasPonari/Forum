@@ -81,7 +81,7 @@ export function useRepresentatives(userDistricts: UserDistrictInfo | null) {
         const { data } = await supabase
           .from("politicians")
           .select(
-            "id, name, district, organization, primary_role_en, party, email, photo_url"
+            "id, name, district, organization, primary_role_en, party, email, photo_url, salary"
           )
           .ilike("organization", "%House of Commons%")
           .ilike("district", federalName)
@@ -95,7 +95,7 @@ export function useRepresentatives(userDistricts: UserDistrictInfo | null) {
         let { data } = await supabase
           .from("politicians")
           .select(
-            "id, name, district, organization, primary_role_en, party, email, photo_url"
+            "id, name, district, organization, primary_role_en, party, email, photo_url, salary"
           )
           .ilike("organization", "%Assemblée nationale%")
           .ilike("district", provincialName.replace(/-/g, "%"))
@@ -121,7 +121,7 @@ export function useRepresentatives(userDistricts: UserDistrictInfo | null) {
         const { data } = await supabase
           .from("politicians")
           .select(
-            "id, name, district, organization, primary_role_en, party, email, photo_url"
+            "id, name, district, organization, primary_role_en, party, email, photo_url, salary"
           )
           .ilike("primary_role_en", "%councillor%")
           .ilike("district", municipalName)
@@ -135,7 +135,7 @@ export function useRepresentatives(userDistricts: UserDistrictInfo | null) {
         let { data } = await supabase
           .from("politicians")
           .select(
-            "id, name, district, organization, primary_role_en, party, email, photo_url"
+            "id, name, district, organization, primary_role_en, party, email, photo_url, salary"
           )
           .ilike("primary_role_en", "%borough mayor%")
           .ilike("district", municipalBorough.replace(/-/g, "%"))
@@ -162,7 +162,7 @@ export function useRepresentatives(userDistricts: UserDistrictInfo | null) {
         const { data } = await supabase
           .from("politicians")
           .select(
-            "id, name, district, organization, primary_role_en, party, email, photo_url"
+            "id, name, district, organization, primary_role_en, party, email, photo_url, salary"
           )
           .ilike("organization", "%Conseil municipal de%")
           .ilike("primary_role_en", "%Mayor%")
@@ -179,7 +179,7 @@ export function useRepresentatives(userDistricts: UserDistrictInfo | null) {
         const { data: mayorData } = await supabase
           .from("politicians")
           .select(
-            "id, name, district, organization, primary_role_en, party, email, photo_url"
+            "id, name, district, organization, primary_role_en, party, email, photo_url, salary"
           )
           .ilike("organization", "%Vancouver City Council%")
           .ilike("primary_role_en", "%Mayor%")
@@ -190,7 +190,7 @@ export function useRepresentatives(userDistricts: UserDistrictInfo | null) {
         const { data: councillorData } = await supabase
           .from("politicians")
           .select(
-            "id, name, district, organization, primary_role_en, party, email, photo_url"
+            "id, name, district, organization, primary_role_en, party, email, photo_url, salary"
           )
           .ilike("organization", "%Vancouver City Council%")
           .ilike("primary_role_en", "%Councillor%")

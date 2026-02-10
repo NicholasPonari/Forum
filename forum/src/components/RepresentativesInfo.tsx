@@ -157,35 +157,38 @@ export function RepresentativesInfo({
 
 	return (
 		<ScrollArea className={cn("h-full", className)}>
-			<div className="p-4 space-y-2">
+			<div className="p-4 space-y-3">
 				<div className="px-1">
-					<h2 className="text-lg font-semibold tracking-tight">
+					<h2 className="text-lg font-bold tracking-tight">
 						{t.representatives.title}
 					</h2>
 				</div>
 
-				<div className="grid gap-4">
+				<div className="grid gap-3">
 					{visibleSections.map((section) => (
-						<Card key={section.key} className="overflow-hidden py-0.5">
-							<div className="h-8 px-3 bg-muted/30 border-b flex items-center justify-between gap-2">
-								<div className="flex items-center gap-2 text-sm font-medium">
+						<Card 
+							key={section.key} 
+							className="overflow-hidden border shadow-sm"
+						>
+							<div className="h-9 px-3 bg-muted/30 border-b flex items-center justify-between gap-2">
+								<div className="flex items-center gap-2 text-sm font-semibold text-foreground/80">
 									<section.icon className="w-4 h-4 text-muted-foreground" />
 									<span>{section.label}</span>
 								</div>
 								<Badge
 									variant="outline"
-									className="font-normal text-xs truncate max-w-[150px] bg-background/50"
+									className="font-normal text-xs truncate max-w-[150px] bg-background"
 								>
 									{formatDistrictName(
 										section.districtName || "Unknown District"
 									)}
 								</Badge>
 							</div>
-							<div className="px-3 pb-4">
+							<div className="px-3 py-0">
 								{section.politician ? (
-									<div className="flex gap-3 items-center">
+									<div className="flex gap-3 items-start">
 										{section.politician.photo_url ? (
-											<div className="relative w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border bg-muted">
+											<div className="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border bg-muted">
 												<Image
 													src={section.politician.photo_url}
 													alt={section.politician.name}
@@ -194,43 +197,44 @@ export function RepresentativesInfo({
 												/>
 											</div>
 										) : (
-											<div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center flex-shrink-0 border">
-												<User className="w-7 h-7 text-muted-foreground" />
+											<div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0 border">
+												<User className="w-6 h-6 text-muted-foreground" />
 											</div>
 										)}
 
-										<div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-											<h3 className="font-semibold text-sm truncate leading-none">
+										<div className="flex-1 min-w-0 flex flex-col gap-0.5">
+											<h3 className="font-semibold text-sm truncate text-foreground leading-snug">
 												{section.politician.name}
 											</h3>
 											<p className="text-xs text-muted-foreground truncate">
 												{section.politician.party || section.role}
 											</p>
-											{section.politician.salary && (
-												<p className="text-xs text-muted-foreground">
-													${section.politician.salary.toLocaleString()}
-												</p>
-											)}
+											
+											<div className="flex items-center justify-between gap-2 mt-1.5">
+												{section.politician.salary && (
+													<p className="text-sm font-medium text-foreground/80">
+														${section.politician.salary.toLocaleString()}
+													</p>
+												)}
 
-											{section.politician.email && (
-												<div className="flex items-center pt-1">
+												{section.politician.email && (
 													<Button
 														variant="outline"
 														size="sm"
-														className="h-6 text-xs gap-1.5 px-2"
+														className="h-7 text-xs px-2.5 ml-auto"
 														asChild
 													>
 														<a href={`mailto:${section.politician.email}`}>
-															<Mail className="w-3 h-3" />
+															<Mail className="w-3.5 h-3.5 mr-1.5" />
 															Email
 														</a>
 													</Button>
-												</div>
-											)}
+												)}
+											</div>
 										</div>
 									</div>
 								) : (
-									<div className="text-sm text-muted-foreground italic py-1 text-center">
+									<div className="text-sm text-muted-foreground italic py-1.5 text-center">
 										{t.representatives.noRepFound}
 									</div>
 								)}
@@ -240,40 +244,40 @@ export function RepresentativesInfo({
 
 					{isVancouver &&
 						districtInfo.vancouverCouncil.councillors.length > 0 && (
-							<Card className="overflow-hidden py-0.5">
-								<div className="h-8 px-3 bg-muted/30 border-b flex items-center justify-between gap-2">
-									<div className="flex items-center gap-2 text-sm font-medium">
+							<Card className="overflow-hidden border shadow-sm">
+								<div className="h-9 px-3 bg-muted/30 border-b flex items-center justify-between gap-2">
+									<div className="flex items-center gap-2 text-sm font-semibold text-foreground/80">
 										<MapPin className="w-4 h-4 text-muted-foreground" />
 										<span>{t.representatives.cityCouncil}</span>
 									</div>
 									<Badge
 										variant="outline"
-										className="font-normal text-xs truncate max-w-[150px] bg-background/50"
+										className="font-normal text-xs truncate max-w-[150px] bg-background"
 									>
 										{formatDistrictName(
 											districtInfo.municipalCity.name || "Vancouver"
 										)}
 									</Badge>
 								</div>
-								<div className="px-3 pb-4">
+								<div className="px-3 py-0">
 									<Collapsible
 										open={isVancouverCouncilOpen}
 										onOpenChange={setIsVancouverCouncilOpen}
 									>
 										<CollapsibleTrigger asChild>
 											<Button
-												variant="outline"
+												variant="ghost"
 												size="sm"
-												className="mt-2 h-7 w-full justify-between text-xs"
+												className="w-full justify-between h-8 px-2 hover:bg-muted/50 text-xs"
 											>
-												<span>
+												<span className="font-medium">
 													{isVancouverCouncilOpen
 														? t.representatives.hideCouncillors
 														: `${t.representatives.showCouncillors} (${districtInfo.vancouverCouncil.councillors.length})`}
 												</span>
 												<ChevronDown
 													className={cn(
-														"h-4 w-4 text-muted-foreground transition-transform",
+														"h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
 														isVancouverCouncilOpen ? "rotate-180" : "rotate-0"
 													)}
 												/>
@@ -281,16 +285,16 @@ export function RepresentativesInfo({
 										</CollapsibleTrigger>
 										<CollapsibleContent>
 											<div className="pt-2">
-												<ScrollArea className="max-h-64">
-													<div className="space-y-2 pr-2">
+												<ScrollArea className="max-h-[300px] pr-3 -mr-3">
+													<div className="space-y-2">
 														{districtInfo.vancouverCouncil.councillors.map(
 															(p) => (
 																<div
 																	key={p.id}
-																	className="flex items-center gap-2"
+																	className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-muted/30 transition-colors"
 																>
 																	{p.photo_url ? (
-																		<div className="relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border bg-muted">
+																		<div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border bg-muted">
 																			<Image
 																				src={p.photo_url}
 																				alt={p.name}
@@ -299,7 +303,7 @@ export function RepresentativesInfo({
 																			/>
 																		</div>
 																	) : (
-																		<div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center flex-shrink-0 border">
+																		<div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 border">
 																			<User className="w-4 h-4 text-muted-foreground" />
 																		</div>
 																	)}
@@ -310,9 +314,9 @@ export function RepresentativesInfo({
 																		</p>
 																		{p.email && (
 																			<Button
-																				variant="outline"
+																				variant="link"
 																				size="sm"
-																				className="mt-1 h-6 text-xs gap-1.5 px-2"
+																				className="h-auto p-0 text-xs text-muted-foreground hover:text-primary gap-1 justify-start"
 																				asChild
 																			>
 																				<a href={`mailto:${p.email}`}>
