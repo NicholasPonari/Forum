@@ -40,4 +40,4 @@ celery.conf.update(
 )
 
 # Auto-discover tasks in the tasks package
-celery.autodiscover_tasks(["app.tasks"])
+celery.autodiscover_tasks(["app"])
