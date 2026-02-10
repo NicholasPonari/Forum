@@ -18,8 +18,10 @@ app = FastAPI(
 # Add CORS middleware for cross-origin requests from frontend
 app.add_middleware(
     CORSMiddleware,
-    # Allow vox.vote and any subdomain (e.g. www.vox.vote, preview deployments)
-    allow_origin_regex=r"^https://([a-z0-9-]+\\.)*vox\\.vote$",
+    allow_origins=[
+        "https://www.vox.vote",
+        "https://vox.vote",
+    ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
