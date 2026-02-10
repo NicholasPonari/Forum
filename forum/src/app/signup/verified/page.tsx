@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -100,7 +100,7 @@ const createSignUpSchema = (isUpgrade: boolean) =>
 			}
 		});
 
-export default function VerifiedSignUpPage() {
+function VerifiedSignUpPageContent() {
 	const [step, setStep] = useState(1);
 	const [passwordsMatch, setPasswordsMatch] = useState(false);
 	const [selfieFile, setSelfieFile] = useState<File | null>(null);
@@ -1193,5 +1193,13 @@ export default function VerifiedSignUpPage() {
 				</DialogContent>
 			</Dialog>
 		</div>
+	);
+}
+
+export default function VerifiedSignUpPage() {
+	return (
+		<Suspense>
+			<VerifiedSignUpPageContent />
+		</Suspense>
 	);
 }
