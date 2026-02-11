@@ -157,22 +157,32 @@ export function RepresentativesInfo({
 
 	return (
 		<ScrollArea className={cn("h-full", className)}>
-			<div className="p-4 space-y-3">
+			<div className="p-4 space-y-1">
 				<div className="px-1">
 					<h2 className="text-lg font-bold tracking-tight">
 						{t.representatives.title}
 					</h2>
 				</div>
 
-				<div className="grid gap-3">
+				<div className="grid gap-2">
 					{visibleSections.map((section) => (
 						<Card 
 							key={section.key} 
-							className="overflow-hidden border shadow-sm"
+							className="overflow-hidden border shadow-sm gap-3"
 						>
-							<div className="h-9 px-3 bg-muted/30 border-b flex items-center justify-between gap-2">
-								<div className="flex items-center gap-2 text-sm font-semibold text-foreground/80">
-									<section.icon className="w-4 h-4 text-muted-foreground" />
+							<div className="h-7 px-3 bg-muted/30 border-b flex items-center justify-between gap-2">
+								<div className={cn(
+									"flex items-center gap-2 text-sm font-semibold",
+									section.key === "federal" && "text-blue-600",
+									section.key === "provincial" && "text-emerald-600",
+									(section.key === "municipalCity" || section.key === "municipalBorough" || section.key === "municipalDistrict") && "text-amber-600"
+								)}>
+									<section.icon className={cn(
+										"w-4 h-4",
+										section.key === "federal" && "text-blue-600",
+										section.key === "provincial" && "text-emerald-600", 
+										(section.key === "municipalCity" || section.key === "municipalBorough" || section.key === "municipalDistrict") && "text-amber-600"
+									)} />
 									<span>{section.label}</span>
 								</div>
 								<Badge
@@ -188,7 +198,7 @@ export function RepresentativesInfo({
 								{section.politician ? (
 									<div className="flex gap-3 items-start">
 										{section.politician.photo_url ? (
-											<div className="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border bg-muted">
+											<div className="relative w-14 h-14 rounded-full overflow-hidden flex-shrink-0 border bg-muted">
 												<Image
 													src={section.politician.photo_url}
 													alt={section.politician.name}
@@ -210,7 +220,7 @@ export function RepresentativesInfo({
 												{section.politician.party || section.role}
 											</p>
 											
-											<div className="flex items-center justify-between gap-2 mt-1.5">
+											<div className="flex items-center justify-between gap-2 mt-0">
 												{section.politician.salary && (
 													<p className="text-sm font-medium text-foreground/80">
 														${section.politician.salary.toLocaleString()}
@@ -245,9 +255,9 @@ export function RepresentativesInfo({
 					{isVancouver &&
 						districtInfo.vancouverCouncil.councillors.length > 0 && (
 							<Card className="overflow-hidden border shadow-sm">
-								<div className="h-9 px-3 bg-muted/30 border-b flex items-center justify-between gap-2">
-									<div className="flex items-center gap-2 text-sm font-semibold text-foreground/80">
-										<MapPin className="w-4 h-4 text-muted-foreground" />
+								<div className="h-9 px-3 bg-amber-100/80 border-amber-200 border-b flex items-center justify-between gap-2">
+									<div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
+										<MapPin className="w-4 h-4" />
 										<span>{t.representatives.cityCouncil}</span>
 									</div>
 									<Badge

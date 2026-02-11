@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 	// Check if user is a "Member" type (has restrictions)
 	const isMember = profile?.type?.toLowerCase() === "member";
 
-	const fetchProfile = async (userId: string, timeoutMs: number = 15000, isMountedRef?: React.MutableRefObject<boolean>) => {
+	const fetchProfile = async (userId: string, timeoutMs: number = 45000, isMountedRef?: React.MutableRefObject<boolean>) => {
 		const now = Date.now();
 		const guard = profileFetchGuardRef.current;
 		if (guard.inFlight && guard.userId === userId) {
@@ -154,7 +154,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 	const refreshProfile = async () => {
 		if (user?.id) {
-			await fetchProfile(user.id, 15000, isMountedRef);
+			await fetchProfile(user.id, 45000, isMountedRef);
 		}
 	};
 
@@ -166,7 +166,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 			try {
 				const sessionPromise = supabase.auth.getSession();
 				const timeoutPromise = new Promise<never>((_, reject) =>
-					setTimeout(() => reject(new Error("getSession timeout")), 15000)
+					setTimeout(() => reject(new Error("getSession timeout")), 45000)
 				);
 				const { data, error } = await Promise.race([
 					sessionPromise,
@@ -182,7 +182,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 				setSession(data.session);
 				setUser(data.session?.user ?? null);
 				if (data.session?.user?.id) {
-					await fetchProfile(data.session.user.id, 15000, isMountedRef);
+					await fetchProfile(data.session.user.id, 45000, isMountedRef);
 				}
 			} catch (error) {
 				if (!isMountedRef.current) return;
@@ -208,7 +208,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 					setSession(nextSession);
 					setUser(nextSession?.user ?? null);
 					if (nextSession?.user?.id) {
-						await fetchProfile(nextSession.user.id, 15000, isMountedRef);
+						await fetchProfile(nextSession.user.id, 45000, isMountedRef);
 					} else {
 						setProfile(null);
 					}
