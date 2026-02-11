@@ -32,6 +32,7 @@ interface Politician {
 	party: string | null;
 	email: string | null;
 	photo_url: string | null;
+	salary?: number | null;
 }
 
 interface DistrictData {
@@ -110,7 +111,7 @@ export function ProfileDistricts({
 				const { data } = await supabase
 					.from("politicians")
 					.select(
-						"id, name, district, organization, primary_role_en, party, email, photo_url"
+						"id, name, district, organization, primary_role_en, party, email, photo_url, salary"
 					)
 					.ilike("organization", "%House of Commons%")
 					.ilike("district", federalName)
@@ -123,7 +124,7 @@ export function ProfileDistricts({
 				let { data } = await supabase
 					.from("politicians")
 					.select(
-						"id, name, district, organization, primary_role_en, party, email, photo_url"
+						"id, name, district, organization, primary_role_en, party, email, photo_url, salary"
 					)
 					.ilike("organization", "%Assemblée nationale%")
 					.ilike("district", provincialName.replace(/-/g, "%"))
@@ -134,7 +135,7 @@ export function ProfileDistricts({
 					const ontarioResult = await supabase
 						.from("politicians")
 						.select(
-							"id, name, district, organization, primary_role_en, party, email, photo_url"
+							"id, name, district, organization, primary_role_en, party, email, photo_url, salary"
 						)
 						.ilike("organization", "%Legislative Assembly of Ontario%")
 						.ilike("district", provincialName.replace(/-/g, "%"))
@@ -148,7 +149,7 @@ export function ProfileDistricts({
 				const { data } = await supabase
 					.from("politicians")
 					.select(
-						"id, name, district, organization, primary_role_en, party, email, photo_url"
+						"id, name, district, organization, primary_role_en, party, email, photo_url, salary"
 					)
 					.ilike("primary_role_en", "%councillor%")
 					.ilike("district", municipalName)
@@ -161,7 +162,7 @@ export function ProfileDistricts({
 				let { data } = await supabase
 					.from("politicians")
 					.select(
-						"id, name, district, organization, primary_role_en, party, email, photo_url"
+						"id, name, district, organization, primary_role_en, party, email, photo_url, salary"
 					)
 					.ilike("primary_role_en", "%borough mayor%")
 					.ilike("district", municipalBorough.replace(/-/g, "%"))
@@ -172,7 +173,7 @@ export function ProfileDistricts({
 					const mayorResult = await supabase
 						.from("politicians")
 						.select(
-							"id, name, district, organization, primary_role_en, party, email, photo_url"
+							"id, name, district, organization, primary_role_en, party, email, photo_url, salary"
 						)
 						.ilike("primary_role_en", "%Mayor%")
 						.not("primary_role_en", "ilike", "%borough%")
@@ -365,6 +366,11 @@ export function ProfileDistricts({
 										<p className="text-xs text-gray-600 truncate">
 											{district.politician.party || district.role}
 										</p>
+										{district.politician.salary && (
+											<p className="text-xs text-gray-600 font-medium">
+												Salary: ${district.politician.salary.toLocaleString()}/year
+											</p>
+										)}
 									</div>
 									{district.politician.email && (
 										<Button

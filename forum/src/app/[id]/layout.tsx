@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { createServerSupabaseClient } from "@/lib/supabaseServer";
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+	const { id } = await params;
 	const supabase = await createServerSupabaseClient();
 	const { data } = await supabase
 		.from("issues")
 		.select("title, narrative")
-		.eq("id", params.id)
+		.eq("id", id)
 		.single();
 
 	if (!data) {

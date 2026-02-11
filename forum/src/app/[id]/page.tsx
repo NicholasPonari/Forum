@@ -22,6 +22,14 @@ import {
 	MoreHorizontal,
 	Pencil,
 	Trash2,
+	CheckCircle2,
+	XCircle,
+	AlertCircle,
+	Quote,
+	Vote,
+	FileText,
+	Users,
+	Gavel,
 } from "lucide-react";
 import { toast } from "sonner";
 import { IssueLocationMap } from "@/components/IssueLocationMap";
@@ -50,6 +58,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { IssueEditForm } from "@/components/IssueEditForm";
+import { cn } from "@/lib/utils";
 
 async function fetchIssue(id: string): Promise<DetailedIssue | null> {
 	const supabase = createClient();
@@ -66,6 +75,304 @@ async function fetchIssue(id: string): Promise<DetailedIssue | null> {
 		data.profiles = data.profiles;
 	}
 	return data as DetailedIssue;
+}
+
+const FAKE_DEBATE_DATA = {
+	date: "February 04, 2026",
+	title: "House Debate Summary",
+	summary: `The House of Commons debated several key issues, with a significant focus on the rising cost of groceries and the government's proposed Canada Groceries and Essentials Benefit Act. This act aims to provide financial relief to Canadians struggling with high food prices. The debate highlighted differing views on the effectiveness of the proposed measures, with the Liberal government advocating for immediate financial support to help Canadians cope with inflation, while the Conservative opposition criticized the plan as a temporary fix that doesn't address the root causes of inflation, such as tariffs and climate change. The Bloc Québécois supported the measure but questioned the timing and fiscal planning of the government.
+
+Another major topic was the second reading of Bill C-222, which aimed to amend the Employment Insurance Act to provide support for parents grieving the death of a child. This bill received unanimous support in the vote but was ultimately defeated, raising concerns about the procedural aspects of its passage. Additionally, an opposition motion on food affordability was defeated, reflecting ongoing debates about how best to address the cost of living crisis in Canada.
+
+Overall, the debates underscored the urgent need for effective policies to address economic challenges faced by Canadians, particularly in terms of food security and financial support for vulnerable groups. Despite some consensus on the importance of these issues, the debates revealed significant partisan divides over the best approaches to take.`,
+	outcome:
+		"The second reading of Bill C-245 and Bill C-222 were both defeated, as was the opposition motion on food affordability. No new measures were passed.",
+	participants: [
+		{
+			name: "Steeve Lavoie",
+			party: "Liberal",
+			riding: "Beauport—Limoilou",
+			stance:
+				"Supported the Canada Groceries and Essentials Benefit Act, emphasizing the need to put money back in Canadians' pockets quickly.",
+		},
+		{
+			name: "Jeremy Patzer",
+			party: "Conservative",
+			riding: "Swift Current—Grasslands—Kindersley",
+			stance:
+				"Criticized the government's plan as ineffective in lowering grocery costs and opposed borrowing money for temporary relief.",
+		},
+		{
+			name: "Gabriel Ste-Marie",
+			party: "Bloc Québécois",
+			riding: "Joliette—Manawan",
+			stance:
+				"Supported the benefit but questioned why it wasn't included in the budget and advocated for monthly payments to reduce debt burdens.",
+		},
+		{
+			name: "Ron McKinnon",
+			party: "Liberal",
+			riding: "Coquitlam—Port Coquitlam",
+			stance:
+				"Defended the government's approach, attributing high food prices to external factors like tariffs and climate change.",
+		},
+		{
+			name: "Leslyn Lewis",
+			party: "Conservative",
+			riding: "Haldimand—Norfolk",
+			stance:
+				"Argued for substantive solutions over temporary fixes and stressed the importance of addressing the root causes of inflation.",
+		},
+	],
+	issues: [
+		{
+			issue: "Canada Groceries and Essentials Benefit Act",
+			description:
+				"A government proposal to provide financial relief to Canadians facing high grocery costs, debated for its effectiveness and fiscal impact.",
+		},
+		{
+			issue: "Bill C-222 (Support for Grieving Parents)",
+			description:
+				"A bill to amend the Employment Insurance Act to support parents grieving the death of a child, which was unanimously supported but defeated.",
+		},
+		{
+			issue: "Food Affordability",
+			description:
+				"An opposition motion addressing the high cost of food, reflecting broader concerns about inflation and cost of living.",
+		},
+		{
+			issue: "Inflation and Cost of Living",
+			description:
+				"Ongoing debates about how to address rising prices and economic pressures on Canadian families, with differing views on government interventions.",
+		},
+		{
+			issue: "Fiscal Planning and Budgeting",
+			description:
+				"Concerns about the government's fiscal strategy and the inclusion of new spending measures outside the formal budget process.",
+		},
+	],
+	votes: [
+		{
+			motion:
+				"2nd reading of Bill C-222, An Act to amend the Employment Insurance Act and the Canada Labour Code (death of a child)",
+			bill: "Bill C-222",
+			yea: 331,
+			nay: 0,
+			result: "defeated",
+		},
+		{
+			motion:
+				"2nd reading of Bill C-245, An Act to amend the Canadian Multiculturalism Act (non-application in Quebec)",
+			bill: "Bill C-245",
+			yea: 22,
+			nay: 307,
+			result: "defeated",
+		},
+		{
+			motion: "Opposition Motion (Food affordability)",
+			bill: "Opposition Motion",
+			yea: 137,
+			nay: 195,
+			result: "defeated",
+		},
+	],
+};
+
+function FakeDebatePage() {
+	const router = useRouter();
+
+	return (
+		<>
+			<Header />
+			<main className="max-w-4xl mx-auto py-8 px-4 sm:px-6 mb-32">
+				{/* Back button */}
+				<div className="mb-6">
+					<Button
+						variant="ghost"
+						className="flex items-center gap-2 px-2 text-gray-600 hover:text-gray-900"
+						onClick={() => router.back()}
+					>
+						<ArrowLeft className="w-4 h-4" />
+						Back
+					</Button>
+				</div>
+
+				<div className="space-y-8">
+					{/* Header Section */}
+					<div className="space-y-4">
+						<div className="flex flex-wrap items-center gap-3">
+							<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+								<Gavel className="w-3.5 h-3.5 mr-1.5" />
+								House of Commons
+							</span>
+							<span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
+								House Debate
+							</span>
+							<span className="text-sm text-gray-500">
+								{FAKE_DEBATE_DATA.date}
+							</span>
+						</div>
+						<h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
+							{FAKE_DEBATE_DATA.title}
+						</h1>
+					</div>
+
+					{/* Summary Section */}
+					<div className="bg-white rounded-xl shadow-sm border p-6 sm:p-8">
+						<h2 className="flex items-center gap-2 text-xl font-bold text-gray-900 mb-4">
+							<FileText className="w-5 h-5 text-indigo-600" />
+							Summary
+						</h2>
+						<div className="prose prose-gray max-w-none text-gray-700 space-y-4">
+							{FAKE_DEBATE_DATA.summary.split("\n\n").map((para, i) => (
+								<p key={i} className="leading-relaxed">
+									{para}
+								</p>
+							))}
+						</div>
+					</div>
+
+					{/* Participants Section */}
+					<div className="bg-white rounded-xl shadow-sm border p-6 sm:p-8">
+						<h2 className="flex items-center gap-2 text-xl font-bold text-gray-900 mb-6">
+							<Quote className="w-5 h-5 text-indigo-600" />
+							Key Participants & What They Said
+						</h2>
+						<div className="grid gap-6">
+							{FAKE_DEBATE_DATA.participants.map((participant, i) => (
+								<div
+									key={i}
+									className="relative pl-6 border-l-4 border-indigo-100 hover:border-indigo-500 transition-colors bg-gray-50/50 rounded-r-lg p-4"
+								>
+									<div className="text-gray-800 italic mb-3">
+										&ldquo;{participant.stance}&rdquo;
+									</div>
+									<div className="flex items-center gap-2 text-sm">
+										<span className="font-bold text-gray-900">
+											{participant.name}
+										</span>
+										<span className="text-gray-500">
+											({participant.party}, {participant.riding})
+										</span>
+									</div>
+								</div>
+							))}
+						</div>
+					</div>
+
+					{/* Issues Section */}
+					<div className="bg-white rounded-xl shadow-sm border p-6 sm:p-8">
+						<h2 className="flex items-center gap-2 text-xl font-bold text-gray-900 mb-6">
+							<Users className="w-5 h-5 text-indigo-600" />
+							Topics Discussed
+						</h2>
+						<div className="grid gap-4 sm:grid-cols-2">
+							{FAKE_DEBATE_DATA.issues.map((issue, i) => (
+								<div
+									key={i}
+									className="p-4 rounded-lg bg-gray-50 border border-gray-100 hover:border-indigo-200 transition-colors"
+								>
+									<h3 className="font-semibold text-gray-900 mb-2">
+										{issue.issue}
+									</h3>
+									<p className="text-sm text-gray-600">{issue.description}</p>
+								</div>
+							))}
+						</div>
+					</div>
+
+					{/* Outcome Section */}
+					<div className="bg-green-50 rounded-xl shadow-sm border border-green-100 p-6 sm:p-8">
+						<h2 className="flex items-center gap-2 text-xl font-bold text-green-900 mb-4">
+							<CheckCircle2 className="w-5 h-5" />
+							Outcome
+						</h2>
+						<p className="text-green-800 leading-relaxed">
+							{FAKE_DEBATE_DATA.outcome}
+						</p>
+					</div>
+
+					{/* Vote Results Section */}
+					<div className="bg-white rounded-xl shadow-sm border p-6 sm:p-8">
+						<h2 className="flex items-center gap-2 text-xl font-bold text-gray-900 mb-6">
+							<Vote className="w-5 h-5 text-indigo-600" />
+							Vote Results
+						</h2>
+						<div className="space-y-6">
+							{FAKE_DEBATE_DATA.votes.map((vote, i) => {
+								const total = vote.yea + vote.nay;
+								const yeaPercent = total > 0 ? (vote.yea / total) * 100 : 0;
+
+								return (
+									<div
+										key={i}
+										className="p-4 rounded-lg border border-gray-200 bg-gray-50"
+									>
+										<div className="flex items-start justify-between gap-4 mb-4">
+											<div>
+												<h3 className="font-semibold text-gray-900 text-sm mb-1">
+													{vote.motion}
+												</h3>
+												<div className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+													{vote.bill || "Motion"}
+												</div>
+											</div>
+											<div
+												className={cn(
+													"px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap",
+													vote.result === "passed"
+														? "bg-green-100 text-green-800"
+														: "bg-red-100 text-red-800"
+												)}
+											>
+												{vote.result}
+											</div>
+										</div>
+
+										{/* Progress Bar */}
+										<div className="space-y-2">
+											<div className="flex justify-between text-sm font-medium">
+												<span className="text-green-600">Yea: {vote.yea}</span>
+												<span className="text-red-600">Nay: {vote.nay}</span>
+											</div>
+											<div className="h-2.5 bg-gray-200 rounded-full overflow-hidden flex">
+												<div
+													className="bg-green-500 h-full"
+													style={{ width: `${yeaPercent}%` }}
+												/>
+												<div
+													className="bg-red-500 h-full"
+													style={{ width: `${100 - yeaPercent}%` }}
+												/>
+											</div>
+										</div>
+									</div>
+								);
+							})}
+						</div>
+					</div>
+
+					{/* Attribution */}
+					<div className="text-center text-sm text-gray-500 pt-8 border-t">
+						<p>
+							This summary was automatically generated by Vox.Vote from official
+							parliamentary sources. Content is for informational purposes.
+						</p>
+						<div className="flex justify-center gap-4 mt-2">
+							<a
+								href="https://www.ourcommons.ca/DocumentViewer/en/house/2026-02-04/hansard"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-indigo-600 hover:underline"
+							>
+								Official Transcript (Hansard)
+							</a>
+						</div>
+					</div>
+				</div>
+			</main>
+		</>
+	);
 }
 
 export default function IssuePage() {
@@ -89,6 +396,10 @@ export default function IssuePage() {
 
 	// Check if current user is the post owner
 	const isOwner = user?.id && issue?.user_id === user.id;
+
+	if (params.id === "42") {
+		return <FakeDebatePage />;
+	}
 
 	useEffect(() => {
 		const loadIssue = async () => {

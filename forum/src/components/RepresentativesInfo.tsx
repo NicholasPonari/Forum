@@ -220,27 +220,25 @@ export function RepresentativesInfo({
 												{section.politician.party || section.role}
 											</p>
 											
-											<div className="flex items-center justify-between gap-2 mt-0">
-												{section.politician.salary && (
-													<p className="text-sm font-medium text-foreground/80">
-														${section.politician.salary.toLocaleString()}
-													</p>
-												)}
+											{section.politician.salary && (
+												<p className="text-xs text-black truncate">
+													Salary: ${section.politician.salary.toLocaleString()}/year
+												</p>
+											)}
 
-												{section.politician.email && (
-													<Button
-														variant="outline"
-														size="sm"
-														className="h-7 text-xs px-2.5 ml-auto"
-														asChild
-													>
-														<a href={`mailto:${section.politician.email}`}>
-															<Mail className="w-3.5 h-3.5 mr-1.5" />
-															Email
-														</a>
-													</Button>
-												)}
-											</div>
+											{section.politician.email && (
+												<Button
+													variant="outline"
+													size="sm"
+													className="h-7 text-xs px-2.5 mt-0"
+													asChild
+												>
+													<a href={`mailto:${section.politician.email}`}>
+														<Mail className="w-3.5 h-3.5 mr-1.5" />
+														Email
+													</a>
+												</Button>
+											)}
 										</div>
 									</div>
 								) : (

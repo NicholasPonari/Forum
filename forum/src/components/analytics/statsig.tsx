@@ -5,13 +5,7 @@ import { StatsigProvider, useClientAsyncInit } from "@statsig/react-bindings";
 import { StatsigAutoCapturePlugin } from "@statsig/web-analytics";
 import { StatsigSessionReplayPlugin } from "@statsig/session-replay";
 
-export default function MyStatsig({ children }: { children: React.ReactNode }) {
-	const [isClient, setIsClient] = useState(false);
-
-	useEffect(() => {
-		setIsClient(true);
-	}, []);
-
+function StatsigWrapper({ children }: { children: React.ReactNode }) {
 	const user = React.useMemo(() => ({ userID: "a-user" }), []);
 
 	const options = React.useMemo(
@@ -30,13 +24,23 @@ export default function MyStatsig({ children }: { children: React.ReactNode }) {
 		options
 	);
 
-	if (!isClient) {
-		return <>{children}</>;
-	}
-
 	return (
 		<StatsigProvider client={client}>
 			{children}
 		</StatsigProvider>
 	);
+}
+
+export default function MyStatsig({ children }: { children: React.ReactNode }) {
+	const [isClient, setIsClient] = useState(false);
+
+	useEffect(() => {
+		setIsClient(true);
+	}, []);
+
+	if (!isClient) {
+		return <>{children}</>;
+	}
+
+	return <StatsigWrapper>{children}</StatsigWrapper>;
 }
