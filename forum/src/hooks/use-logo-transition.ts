@@ -81,7 +81,7 @@ export function useLogoTransition(
 					position: "fixed",
 					top: 0,
 					left: 0,
-					zIndex: 50,
+					zIndex: 10,
 					originX: 0,
 					originY: 0,
 					x,
