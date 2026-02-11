@@ -1,11 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { StatsigProvider, useClientAsyncInit } from "@statsig/react-bindings";
 import { StatsigAutoCapturePlugin } from "@statsig/web-analytics";
 import { StatsigSessionReplayPlugin } from "@statsig/session-replay";
 
 export default function MyStatsig({ children }: { children: React.ReactNode }) {
+	const [isClient, setIsClient] = useState(false);
+
+	useEffect(() => {
+		setIsClient(true);
+	}, []);
+
 	const user = React.useMemo(() => ({ userID: "a-user" }), []);
 
 	const options = React.useMemo(
@@ -23,6 +29,10 @@ export default function MyStatsig({ children }: { children: React.ReactNode }) {
 		user,
 		options
 	);
+
+	if (!isClient) {
+		return <>{children}</>;
+	}
 
 	return (
 		<StatsigProvider client={client}>
