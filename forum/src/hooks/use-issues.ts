@@ -52,7 +52,7 @@ export function useIssues() {
           .order("created_at", { ascending: false })
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .limit(50) as any,
-        15000,
+        45000,
         "issues select"
       );
       const { data: issuesData, error: issuesError } = issuesResult ?? {};
@@ -99,7 +99,7 @@ export function useIssues() {
             .from("votes")
             .select("issue_id, value")
             .in("issue_id", issueIds) as any,
-          15000,
+          45000,
           "votes select"
         );
         const { data: votesData, error: votesError } = votesResult ?? {};
@@ -132,7 +132,7 @@ export function useIssues() {
               .select("issue_id")
               .in("issue_id", issueIds) as any)
           : Promise.resolve({ data: [], error: null }),
-        15000,
+        45000,
         "comments select"
       );
       const { data: commentsData, error: commentsError } = commentsResult ?? {};

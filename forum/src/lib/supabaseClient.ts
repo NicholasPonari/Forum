@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 let clientInstance: SupabaseClient | undefined;
 
-const createLoggingFetch = (timeoutMs: number = 15000): typeof fetch => {
+const createLoggingFetch = (timeoutMs: number = 45000): typeof fetch => {
   const baseFetch = globalThis.fetch.bind(globalThis);
 
   return async (input: RequestInfo | URL, init?: RequestInit) => {
