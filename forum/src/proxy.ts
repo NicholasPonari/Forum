@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const ALLOWED_COUNTRIES = ['CA'];
+const ALLOWED_COUNTRIES = ['CA', 'US']; // Temporarily added US for YC access
 
 export function proxy(request: NextRequest) {
   // Get country from Vercel's geo object or header
@@ -22,14 +22,18 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // TEMPORARILY DISABLED: Allow all countries for YC access
   // Allow if no country detected (local development) or if country is allowed
-  if (!country || ALLOWED_COUNTRIES.includes(country)) {
-    return NextResponse.next();
-  }
+  // if (!country || ALLOWED_COUNTRIES.includes(country)) {
+  //   return NextResponse.next();
+  // }
 
-  // Redirect to blocked page
-  const blockedUrl = new URL('/blocked', request.url);
-  return NextResponse.redirect(blockedUrl);
+  // TEMPORARILY DISABLED: Redirect to blocked page
+  // const blockedUrl = new URL('/blocked', request.url);
+  // return NextResponse.redirect(blockedUrl);
+
+  // Allow all requests to pass through temporarily
+  return NextResponse.next();
 }
 
 export const config = {
