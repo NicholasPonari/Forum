@@ -3,9 +3,8 @@ import "@nomicfoundation/hardhat-ethers";
 import "@nomicfoundation/hardhat-chai-matchers";
 import "@typechain/hardhat";
 
-// Default dev private key (Hardhat account #0) - NEVER use in production
-const DEV_PRIVATE_KEY =
-  "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+// Read private key from environment variable — never hardcode keys in source
+const DEPLOYER_PRIVATE_KEY = process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY;
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -18,7 +17,7 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
-    // Local Hardhat node (for testing)
+    // Local Hardhat node (for testing — uses built-in accounts, no key needed)
     hardhat: {
       chainId: 31337,
     },
@@ -26,25 +25,21 @@ const config: HardhatUserConfig = {
     besuLocal: {
       url: "http://127.0.0.1:8545",
       chainId: 1337,
-      accounts: [DEV_PRIVATE_KEY],
+      accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
       gasPrice: 0,
     },
     // Remote Besu node (e.g., on a VPS)
     besuDev: {
       url: process.env.BLOCKCHAIN_RPC_URL || "http://127.0.0.1:8545",
       chainId: 1337,
-      accounts: process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY
-        ? [process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY]
-        : [DEV_PRIVATE_KEY],
+      accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
       gasPrice: 0,
     },
     // Polygon Amoy testnet (for future public chain migration)
     polygonAmoy: {
       url: process.env.POLYGON_RPC_URL || "https://rpc-amoy.polygon.technology",
       chainId: 80002,
-      accounts: process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY
-        ? [process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY]
-        : [],
+      accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
     },
   },
   paths: {

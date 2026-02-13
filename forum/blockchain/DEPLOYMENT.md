@@ -56,11 +56,15 @@ Add to `forum/.env.local`:
 
 ```env
 BLOCKCHAIN_RPC_URL=http://127.0.0.1:8545
-BLOCKCHAIN_ISSUER_PRIVATE_KEY=ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+BLOCKCHAIN_DEPLOYER_PRIVATE_KEY=<your-dev-private-key>
+BLOCKCHAIN_ISSUER_PRIVATE_KEY=<your-dev-private-key>
 BLOCKCHAIN_CONTRACT_ADDRESS=<address from step 2>
 BLOCKCHAIN_CHAIN_ID=1337
-BLOCKCHAIN_IDENTITY_SALT=voxvote-dev-salt-change-for-production
+BLOCKCHAIN_IDENTITY_SALT=<generate-a-random-string>
 ```
+
+> **Never commit private keys to version control.** For local development,
+> generate a key with `node -e "console.log(require('ethers').Wallet.createRandom().privateKey.slice(2))"` and store it in `.env.local` only.
 
 ### Step 5: Run Tests
 

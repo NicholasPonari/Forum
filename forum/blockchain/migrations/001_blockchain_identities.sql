@@ -77,7 +77,8 @@ CREATE POLICY "Users can view their own blockchain identity"
 CREATE POLICY "Service role can manage blockchain identities"
     ON public.blockchain_identities
     FOR ALL
-    USING (auth.role() = 'service_role');
+    USING (auth.role() = 'service_role')
+    WITH CHECK (auth.role() = 'service_role');
 
 -- Audit log: users can read their own logs
 ALTER TABLE public.blockchain_audit_log ENABLE ROW LEVEL SECURITY;
@@ -90,4 +91,5 @@ CREATE POLICY "Users can view their own audit logs"
 CREATE POLICY "Service role can manage audit logs"
     ON public.blockchain_audit_log
     FOR ALL
-    USING (auth.role() = 'service_role');
+    USING (auth.role() = 'service_role')
+    WITH CHECK (auth.role() = 'service_role');

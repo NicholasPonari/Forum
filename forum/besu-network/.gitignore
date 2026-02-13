@@ -1,6 +1,4 @@
-# Never commit production keys
+# Never commit any private keys
+node-key
 node-key.prod
 *.prod
-
-# Keep dev key for local development
-# node-key is the dev key (Hardhat account #0)

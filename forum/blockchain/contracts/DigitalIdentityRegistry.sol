@@ -209,8 +209,10 @@ contract DigitalIdentityRegistry is Ownable, ReentrancyGuard {
 
         identity.revoked = true;
 
-        unchecked {
-            totalIdentities--;
+        if (totalIdentities > 0) {
+            unchecked {
+                totalIdentities--;
+            }
         }
 
         emit IdentityRevoked(_identityHash, msg.sender, block.timestamp);
