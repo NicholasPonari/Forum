@@ -7,6 +7,12 @@ const createLoggingFetch = (timeoutMs: number = 45000): typeof fetch => {
   const baseFetch = globalThis.fetch.bind(globalThis);
 
   return async (input: RequestInfo | URL, init?: RequestInit) => {
+    const start = Date.now();
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    const method = init?.method || "GET";
+    const logPrefix = `[SupabaseFetch] ${method} ${url}`;
+    console.log(logPrefix, "START", { start });
+
     const controller = new AbortController();
     const timeoutId: ReturnType<typeof setTimeout> = setTimeout(
       () => controller.abort(),
@@ -28,8 +34,12 @@ const createLoggingFetch = (timeoutMs: number = 45000): typeof fetch => {
         ...init,
         signal: controller.signal,
       });
+      const end = Date.now();
+      console.log(logPrefix, "END", { end, duration: end - start, status: res.status });
       return res;
     } catch (err) {
+      const end = Date.now();
+      console.error(logPrefix, "ERROR", { end, duration: end - start, err });
       throw err;
     } finally {
       clearTimeout(timeoutId);

@@ -43,8 +43,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 	// Check if user is a "Member" type (has restrictions)
 	const isMember = profile?.type?.toLowerCase() === "member";
 
-	const fetchProfile = async (userId: string, timeoutMs: number = 45000, isMountedRef?: React.MutableRefObject<boolean>) => {
+	const fetchProfile = async (
+		userId: string,
+		timeoutMs: number = 45000,
+		isMountedRef?: React.MutableRefObject<boolean>,
+	) => {
 		const now = Date.now();
+		const start = now;
+		console.log("[AuthProvider] fetchProfile START", { userId, start });
 		const guard = profileFetchGuardRef.current;
 		if (guard.inFlight && guard.userId === userId) {
 			return;
@@ -84,13 +90,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 				provincial_districts (
 					name,
 					province
-				)`
+				)`,
 			)
 			.eq("id", userId)
 			.single();
 
 		const timeoutPromise = new Promise<never>((_, reject) =>
-			setTimeout(() => reject(new Error("Profile fetch timeout")), timeoutMs)
+			setTimeout(() => reject(new Error("Profile fetch timeout")), timeoutMs),
 		);
 
 		try {
@@ -128,15 +134,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 					municipal_district_id: rawData.municipal_district_id,
 					provincial_district_id: rawData.provincial_district_id,
 					// Handle the joined data - supabase-js usually returns it nested as the table name
-					federal_district: Array.isArray(rawData.federal_districts)
-						? rawData.federal_districts[0]
-						: rawData.federal_districts,
-					municipal_district: Array.isArray(rawData.municipal_districts)
-						? rawData.municipal_districts[0]
-						: rawData.municipal_districts,
-					provincial_district: Array.isArray(rawData.provincial_districts)
-						? rawData.provincial_districts[0]
-						: rawData.provincial_districts,
+					federal_district:
+						Array.isArray(rawData.federal_districts) ?
+							rawData.federal_districts[0]
+						:	rawData.federal_districts,
+					municipal_district:
+						Array.isArray(rawData.municipal_districts) ?
+							rawData.municipal_districts[0]
+						:	rawData.municipal_districts,
+					provincial_district:
+						Array.isArray(rawData.provincial_districts) ?
+							rawData.provincial_districts[0]
+						:	rawData.provincial_districts,
 				};
 
 				if (!isMountedRef || isMountedRef.current) {
@@ -145,6 +154,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 			}
 		} catch (err) {
 		} finally {
+			const end = Date.now();
+			console.log("[AuthProvider] fetchProfile END", {
+				userId,
+				end,
+				duration: end - start,
+			});
 			profileFetchGuardRef.current = {
 				...profileFetchGuardRef.current,
 				inFlight: false,
@@ -163,10 +178,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 		isMountedRef.current = true;
 
 		const loadSession = async () => {
+			const start = Date.now();
+			console.log("[AuthProvider] loadSession START", { start });
 			try {
 				const sessionPromise = supabase.auth.getSession();
 				const timeoutPromise = new Promise<never>((_, reject) =>
-					setTimeout(() => reject(new Error("getSession timeout")), 45000)
+					setTimeout(() => reject(new Error("getSession timeout")), 45000),
 				);
 				const { data, error } = await Promise.race([
 					sessionPromise,
@@ -193,6 +210,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 				setUser(null);
 				setProfile(null);
 			} finally {
+				const end = Date.now();
+				console.log("[AuthProvider] loadSession END", {
+					end,
+					duration: end - start,
+				});
 				if (isMountedRef.current) {
 					setLoading(false);
 				}
@@ -218,7 +240,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 						setLoading(false);
 					}
 				}
-			}
+			},
 		);
 
 		return () => {
