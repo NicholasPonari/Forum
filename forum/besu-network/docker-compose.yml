@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  besu:
+    image: hyperledger/besu:24.1
+    container_name: voxvote-besu
+    ports:
+      - "8545:8545" # JSON-RPC HTTP
+      - "8546:8546" # WebSocket
+      - "30303:30303" # P2P (for future multi-node)
+    volumes:
+      - besu-data:/opt/besu/data
+      - ./genesis.json:/opt/besu/genesis.json:ro
+      - ./node-key:/opt/besu/data/key:ro
+    command:
+      - --genesis-file=/opt/besu/genesis.json
+      - --network-id=1337
+      - --rpc-http-enabled
+      - --rpc-http-host=0.0.0.0
+      - --rpc-http-port=8545
+      - --rpc-http-cors-origins=*
+      - --rpc-http-api=ETH,NET,WEB3,CLIQUE,ADMIN
+      - --rpc-ws-enabled
+      - --rpc-ws-host=0.0.0.0
+      - --rpc-ws-port=8546
+      - --host-allowlist=*
+      - --min-gas-price=0
+      - --miner-enabled
+      - --miner-coinbase=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+      - --logging=INFO
+    environment:
+      - BESU_OPTS=-Xmx512m
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8545/liveness"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  besu-data:
+    driver: local
