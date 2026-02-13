@@ -15,20 +15,22 @@ function StatsigWrapper({ children }: { children: React.ReactNode }) {
 				new StatsigSessionReplayPlugin(),
 			],
 		}),
-		[]
+		[],
 	);
 
-	const { client } = useClientAsyncInit(
+	const { client, isLoading } = useClientAsyncInit(
 		"client-FCsqn9W2urHzSp3WF258MbD6yL8ukmb4vq9SuOMvHTO",
 		user,
-		options
+		options,
 	);
 
-	return (
-		<StatsigProvider client={client}>
-			{children}
-		</StatsigProvider>
-	);
+	// Render children immediately — don't block on Statsig initialization.
+	// Once the client finishes loading, StatsigProvider will provide full functionality.
+	if (isLoading) {
+		return <>{children}</>;
+	}
+
+	return <StatsigProvider client={client}>{children}</StatsigProvider>;
 }
 
 export default function MyStatsig({ children }: { children: React.ReactNode }) {
