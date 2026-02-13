@@ -46,7 +46,7 @@ const config: HardhatUserConfig = {
       chainId: 1337,
       accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [process.env.BLOCKCHAIN_ISSUER_PRIVATE_KEY || ""].filter(Boolean),
       gasPrice: BESU_GAS_PRICE,
-      timeout: 60_000,
+      timeout: 120_000, // 2 min — remote Besu can be slow to mine first blocks
     },
     // Polygon Amoy testnet (for future public chain migration)
     polygonAmoy: {

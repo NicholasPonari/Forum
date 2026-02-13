@@ -18,8 +18,9 @@ async function main() {
   const DigitalIdentityRegistry = await ethers.getContractFactory(
     "DigitalIdentityRegistry",
   );
+  console.log("\n  Submitting deployment transaction...");
   const registry = await DigitalIdentityRegistry.deploy(deployer.address);
-
+  console.log("  Waiting for confirmation (node must be mining blocks)...");
   await registry.waitForDeployment();
   const contractAddress = await registry.getAddress();
 

@@ -16,7 +16,10 @@ USER root
 EXPOSE 8545 8546
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["--genesis-file=/opt/besu/genesis.json", \
+# --data-path and --node-private-key-file ensure key is always from image (not volume); Clique signer can mine
+CMD ["--data-path=/opt/besu/data", \
+     "--node-private-key-file=/opt/besu/node-key-seed", \
+     "--genesis-file=/opt/besu/genesis.json", \
      "--network-id=1337", \
      "--rpc-http-enabled", \
      "--rpc-http-host=0.0.0.0", \

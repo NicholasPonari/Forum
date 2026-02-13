@@ -84,6 +84,14 @@ Copy the printed **contract address**.
 
 If the deploy fails with a connection or timeout error, confirm you are using the Besu service domain and that the Besu service is running and has generated a domain.
 
+**If the deploy hangs after "Waiting for confirmation"**: The node may not be mining blocks. Check that the block number increases (run twice, 10–15 sec apart):
+
+```bash
+curl -s https://YOUR-BESU-URL.up.railway.app -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+```
+
+If the `result` value does not increase, the Besu container is not producing blocks. The Dockerfile was updated so the node key is read from the image (`--node-private-key-file=/opt/besu/node-key-seed`) instead of the volume, so the Clique signer can mine. **Redeploy the Besu service** (push to repo or trigger deploy in Railway) so it uses the new build. After redeploy, wait ~30 seconds and check `eth_blockNumber` again; it should start increasing every ~5 seconds.
+
 ---
 
 ## 7. Configure production environment variables
