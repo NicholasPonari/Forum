@@ -199,11 +199,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 				setSession(data.session);
 				setUser(data.session?.user ?? null);
 				if (data.session?.user?.id) {
-					await fetchProfile(data.session.user.id, 45000, isMountedRef);
+					fetchProfile(data.session.user.id, 45000, isMountedRef);
 				}
 			} catch (error) {
 				if (!isMountedRef.current) return;
 				if (error instanceof Error && error.message === "getSession timeout") {
+					console.warn(
+						"[AuthProvider] getSession timed out; consider clearing persisted auth token if this recurs",
+					);
+					if (process.env.NEXT_PUBLIC_SUPABASE_RECOVERY_RESET === "1") {
+						const key = Object.keys(localStorage).find(
+							(k) => k.startsWith("sb-") && k.endsWith("-auth-token"),
+						);
+						if (key) {
+							console.warn(
+								"[AuthProvider] Auto-clearing corrupted Supabase auth token and reloading:",
+								key,
+							);
+							localStorage.removeItem(key);
+							window.location.reload();
+						}
+					}
 					return;
 				}
 				setSession(null);

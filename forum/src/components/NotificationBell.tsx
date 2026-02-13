@@ -11,6 +11,7 @@ export function NotificationBell() {
 	const [unreadCount, setUnreadCount] = useState(0);
 	const [isOpen, setIsOpen] = useState(false);
 	const [isMobile, setIsMobile] = useState(false);
+	const [disabledUntil, setDisabledUntil] = useState<number>(0);
 
 	// Detect mobile
 	useEffect(() => {
@@ -24,14 +25,24 @@ export function NotificationBell() {
 
 	// Poll for unread count
 	useEffect(() => {
-		if (!user) return;
+		if (!user) {
+			setUnreadCount(0);
+			setDisabledUntil(0);
+			return;
+		}
 
 		const fetchUnreadCount = async () => {
 			// Only fetch if document is visible and panel is closed
 			if (document.visibilityState !== "visible" || isOpen) return;
+			if (Date.now() < disabledUntil) return;
 
 			try {
 				const res = await fetch("/api/notifications/unread-count");
+				if (res.status === 401) {
+					setUnreadCount(0);
+					setDisabledUntil(Date.now() + 10 * 60 * 1000);
+					return;
+				}
 				if (res.ok) {
 					const { count } = await res.json();
 					setUnreadCount(count);
@@ -59,7 +70,7 @@ export function NotificationBell() {
 			clearInterval(interval);
 			document.removeEventListener("visibilitychange", handleVisibilityChange);
 		};
-	}, [user, isOpen]);
+	}, [user, isOpen, disabledUntil]);
 
 	// Refetch count when panel closes
 	useEffect(() => {
@@ -67,6 +78,11 @@ export function NotificationBell() {
 			const fetchCount = async () => {
 				try {
 					const res = await fetch("/api/notifications/unread-count");
+					if (res.status === 401) {
+						setUnreadCount(0);
+						setDisabledUntil(Date.now() + 10 * 60 * 1000);
+						return;
+					}
 					if (res.ok) {
 						const { count } = await res.json();
 						setUnreadCount(count);
@@ -88,7 +104,12 @@ export function NotificationBell() {
 			className="relative p-2 hover:bg-gray-100 rounded-full"
 			onClick={isMobile ? () => setIsOpen(!isOpen) : undefined}
 		>
-			<Image src="/Notifications.png" alt="Notification Bell" width={28} height={28} />
+			<Image
+				src="/Notifications.png"
+				alt="Notification Bell"
+				width={28}
+				height={28}
+			/>
 			{unreadCount > 0 && (
 				<span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
 					{unreadCount > 9 ? "9+" : unreadCount}
