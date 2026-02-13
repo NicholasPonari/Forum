@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { AuthProvider } from "@/context/AuthContext";
 import { PerfDebug } from "@/components/debug/PerfDebug";
 import "./globals.css";
+import MyStatsig from "@/components/analytics/statsig";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -33,7 +34,9 @@ export default function RootLayout({
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
 				<PerfDebug />
-				<AuthProvider>{children}</AuthProvider>
+				<AuthProvider>
+					<MyStatsig>{children}</MyStatsig>
+				</AuthProvider>
 				<Toaster />
 				<Analytics />
 			</body>

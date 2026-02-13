@@ -63,9 +63,11 @@ export const createClient = (): SupabaseClient => {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: {
-        fetch: createLoggingFetch(),
-      },
+      global: process.env.NEXT_PUBLIC_PERF_DEBUG === "1"
+        ? {
+            fetch: createLoggingFetch(),
+          }
+        : undefined,
       auth: {
         autoRefreshToken: true,
         persistSession: true,
