@@ -109,8 +109,10 @@ export class BlockchainIdentityManager {
       ethers.getBytes(identityHash),
     );
 
-    // Submit to blockchain
-    const tx = await this.contract.issueIdentity(identityHash, signature);
+    // Submit to blockchain (pass gasPrice so nodes that reject 0 accept the tx)
+    const tx = await this.contract.issueIdentity(identityHash, signature, {
+      gasPrice: this.config.gasPriceWei,
+    });
     const receipt = await tx.wait();
 
     if (!receipt || receipt.status !== 1) {
@@ -174,7 +176,9 @@ export class BlockchainIdentityManager {
    * can revoke.
    */
   async revokeIdentity(identityHash: string): Promise<RevokeIdentityResult> {
-    const tx = await this.contract.revokeIdentity(identityHash);
+    const tx = await this.contract.revokeIdentity(identityHash, {
+      gasPrice: this.config.gasPriceWei,
+    });
     const receipt = await tx.wait();
 
     if (!receipt || receipt.status !== 1) {

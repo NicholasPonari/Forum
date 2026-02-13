@@ -64,21 +64,25 @@ You should get something like `{"jsonrpc":"2.0","id":1,"result":"0x0"}` or a hig
 
 ## 6. Deploy the smart contract (from your machine)
 
-Use the same contract and deploy script; point it at the Railway Besu URL.
+Use the same contract and deploy script; point it at the **Besu service URL** (not the forum app URL).
+
+**Important:** `BLOCKCHAIN_RPC_URL` must be the URL of the **Besu** Railway service (e.g. `besu-production-xxxx.up.railway.app`), not your Next.js forum (e.g. `forum-production-xxxx.up.railway.app`). The forum returns HTML; Hardhat expects JSON-RPC and will timeout or fail.
 
 ```bash
 cd forum/blockchain
 
-# One-time: set the Railway Besu URL
-export BLOCKCHAIN_RPC_URL=https://YOUR-BESU-URL.up.railway.app
+# One-time: set the Railway BESU service URL (not the forum URL)
+export BLOCKCHAIN_RPC_URL=https://YOUR-BESU-SERVICE-URL.up.railway.app
 export BLOCKCHAIN_DEPLOYER_PRIVATE_KEY=ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+# Or use BLOCKCHAIN_ISSUER_PRIVATE_KEY if you have it in .env
+# export BLOCKCHAIN_ISSUER_PRIVATE_KEY=...
 
 npm run deploy:dev
 ```
 
 Copy the printed **contract address**.
 
-If the deploy fails with a connection error, check that the URL is correct and that the Besu service is running and the domain is generated.
+If the deploy fails with a connection or timeout error, confirm you are using the Besu service domain and that the Besu service is running and has generated a domain.
 
 ---
 

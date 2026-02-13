@@ -16,6 +16,8 @@ export interface BlockchainConfig {
   chainId: number;
   /** Secret salt used to generate identity hashes (never changes) */
   identitySalt: string;
+  /** Gas price in wei for txs (some nodes e.g. Railway reject 0; use 1 gwei if needed) */
+  gasPriceWei: number;
 }
 
 // Default dev values (Hardhat account #0 — NEVER use in production)
@@ -34,6 +36,9 @@ export function getBlockchainConfig(): BlockchainConfig {
   const chainId = parseInt(process.env.BLOCKCHAIN_CHAIN_ID || "1337", 10);
   const identitySalt =
     process.env.BLOCKCHAIN_IDENTITY_SALT || "voxvote-dev-salt";
+  const gasPriceWei = process.env.BLOCKCHAIN_GAS_PRICE
+    ? parseInt(process.env.BLOCKCHAIN_GAS_PRICE, 10)
+    : 1_000_000_000; // 1 gwei (use 0 for local Besu with --min-gas-price=0)
 
   if (!contractAddress) {
     console.warn(
@@ -48,6 +53,7 @@ export function getBlockchainConfig(): BlockchainConfig {
     contractAddress,
     chainId,
     identitySalt,
+    gasPriceWei,
   };
 
   return _config;

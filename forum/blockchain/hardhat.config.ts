@@ -2,9 +2,20 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-ethers";
 import "@nomicfoundation/hardhat-chai-matchers";
 import "@typechain/hardhat";
+import path from "path";
+
+// Load forum's .env.local when running from forum/blockchain (so deploy picks up BLOCKCHAIN_RPC_URL)
+require("dotenv").config({ path: path.resolve(__dirname, "../.env.local") });
+require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
+require("dotenv").config(); // then blockchain/.env if present
 
 // Read private key from environment variable — never hardcode keys in source
 const DEPLOYER_PRIVATE_KEY = process.env.BLOCKCHAIN_DEPLOYER_PRIVATE_KEY;
+
+// Some Besu setups (e.g. Railway) reject gas price 0. Use 1 gwei for remote; override with BLOCKCHAIN_GAS_PRICE.
+const BESU_GAS_PRICE = process.env.BLOCKCHAIN_GAS_PRICE
+  ? parseInt(process.env.BLOCKCHAIN_GAS_PRICE, 10)
+  : 1_000_000_000; // 1 gwei
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -21,19 +32,21 @@ const config: HardhatUserConfig = {
     hardhat: {
       chainId: 31337,
     },
-    // Local Besu private network
+    // Local Besu (localhost or your Besu service URL — never use the forum app URL)
     besuLocal: {
-      url: "http://127.0.0.1:8545",
+      url: process.env.BLOCKCHAIN_RPC_URL || "http://127.0.0.1:8545",
       chainId: 1337,
-      accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
+      accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [process.env.BLOCKCHAIN_ISSUER_PRIVATE_KEY || ""].filter(Boolean),
       gasPrice: 0,
+      timeout: 60_000,
     },
-    // Remote Besu node (e.g., on a VPS)
+    // Remote Besu node (Railway, VPS, etc.) — set BLOCKCHAIN_RPC_URL to your Besu service URL
     besuDev: {
       url: process.env.BLOCKCHAIN_RPC_URL || "http://127.0.0.1:8545",
       chainId: 1337,
-      accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
-      gasPrice: 0,
+      accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [process.env.BLOCKCHAIN_ISSUER_PRIVATE_KEY || ""].filter(Boolean),
+      gasPrice: BESU_GAS_PRICE,
+      timeout: 60_000,
     },
     // Polygon Amoy testnet (for future public chain migration)
     polygonAmoy: {
