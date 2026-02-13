@@ -65,6 +65,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       inFlight: true,
       lastStartedAt: now,
     };
+	const fetchProfile = async (
+		userId: string,
+		timeoutMs: number = 45000,
+		isMountedRef?: React.MutableRefObject<boolean>,
+	) => {
+		const now = Date.now();
+		const guard = profileFetchGuardRef.current;
+		if (guard.inFlight && guard.userId === userId) {
+			return;
+		}
+		if (guard.userId === userId && now - guard.lastStartedAt < 1000) {
+			return;
+		}
+		profileFetchGuardRef.current = {
+			userId,
+			inFlight: true,
+			lastStartedAt: now,
+		};
 
     const profilePromise = supabase
       .from("profiles")
@@ -96,10 +114,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       )
       .eq("id", userId)
       .single();
+				)`,
+			)
+			.eq("id", userId)
+			.single();
 
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error("Profile fetch timeout")), timeoutMs),
     );
+		const timeoutPromise = new Promise<never>((_, reject) =>
+			setTimeout(() => reject(new Error("Profile fetch timeout")), timeoutMs),
+		);
 
     try {
       const { data, error } = await Promise.race([
@@ -146,6 +171,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             ? rawData.provincial_districts[0]
             : rawData.provincial_districts,
         };
+				const profileData: UserProfile = {
+					id: rawData.id,
+					username: rawData.username,
+					type: rawData.type,
+					verified: rawData.verified,
+					language: rawData.language,
+					avatar_url: rawData.avatar_url,
+					coord: coord,
+					bookmarks: rawData.bookmarks,
+					federal_district_id: rawData.federal_district_id,
+					municipal_district_id: rawData.municipal_district_id,
+					provincial_district_id: rawData.provincial_district_id,
+					// Handle the joined data - supabase-js usually returns it nested as the table name
+					federal_district:
+						Array.isArray(rawData.federal_districts) ?
+							rawData.federal_districts[0]
+						:	rawData.federal_districts,
+					municipal_district:
+						Array.isArray(rawData.municipal_districts) ?
+							rawData.municipal_districts[0]
+						:	rawData.municipal_districts,
+					provincial_district:
+						Array.isArray(rawData.provincial_districts) ?
+							rawData.provincial_districts[0]
+						:	rawData.provincial_districts,
+				};
 
         if (!isMountedRef || isMountedRef.current) {
           setProfile(profileData);
@@ -218,11 +269,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         ]);
         if (error) {
         }
+		const loadSession = async () => {
+			try {
+				const sessionPromise = supabase.auth.getSession();
+				const timeoutPromise = new Promise<never>((_, reject) =>
+					setTimeout(() => reject(new Error("getSession timeout")), 45000),
+				);
+				const { data, error } = await Promise.race([
+					sessionPromise,
+					timeoutPromise,
+				]);
+				if (error) {
+				}
 
         if (!isMountedRef.current) {
           return;
         }
 
+				setSession(data.session);
+				setUser(data.session?.user ?? null);
+				if (data.session?.user?.id) {
+					fetchProfile(data.session.user.id, 45000, isMountedRef);
+				}
+			} catch (error) {
+				if (!isMountedRef.current) return;
+				if (error instanceof Error && error.message === "getSession timeout") {
+					console.warn(
+						"[AuthProvider] getSession timed out; consider clearing persisted auth token if this recurs",
+					);
+					if (process.env.NEXT_PUBLIC_SUPABASE_RECOVERY_RESET === "1") {
+						const key = Object.keys(localStorage).find(
+							(k) => k.startsWith("sb-") && k.endsWith("-auth-token"),
+						);
+						if (key) {
+							console.warn(
+								"[AuthProvider] Auto-clearing corrupted Supabase auth token and reloading:",
+								key,
+							);
+							localStorage.removeItem(key);
+							window.location.reload();
+						}
+					}
+					return;
+				}
+				setSession(null);
+				setUser(null);
+				setProfile(null);
+			} finally {
+				if (isMountedRef.current) {
+					setLoading(false);
+				}
+			}
+		};
         setSession(data.session);
         setUser(data.session?.user ?? null);
         if (data.session?.user?.id) {
@@ -265,6 +363,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       },
     );
+		const { data: listener } = supabase.auth.onAuthStateChange(
+			async (event, nextSession) => {
+				if (!isMountedRef.current) return;
+				try {
+					setSession(nextSession);
+					setUser(nextSession?.user ?? null);
+					if (nextSession?.user?.id) {
+						await fetchProfile(nextSession.user.id, 45000, isMountedRef);
+					} else {
+						setProfile(null);
+					}
+				} catch (error) {
+				} finally {
+					if (isMountedRef.current) {
+						setLoading(false);
+					}
+				}
+			},
+		);
 
     return () => {
       isMountedRef.current = false;

@@ -3,7 +3,15 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { X, MapPin, User, Eye, EyeOff, Layers } from "lucide-react";
+import {
+	X,
+	MapPin,
+	User,
+	Eye,
+	EyeOff,
+	Layers,
+	ShieldCheck,
+} from "lucide-react";
 import { Issue, VoteBreakdown } from "@/lib/types/db";
 import {
 	ProfileLocation,
@@ -19,9 +27,13 @@ import {
 	Popup,
 	useMap,
 	GeoJSON,
+	Circle,
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
 interface MapDrawerProps {
 	isOpen: boolean;
@@ -33,6 +45,11 @@ interface MapDrawerProps {
 	// New props for enhanced features
 	profileLocation?: ProfileLocation | null;
 	districts?: MapDistrictData | null;
+}
+
+interface CommunityMember {
+	lat: number;
+	lng: number;
 }
 
 // District layer visibility state
@@ -129,14 +146,14 @@ function getIssuePosition(issue: Issue): [number, number] | null {
 	}
 
 	function getBoundsFromWkbHex(
-		wkbHex: string
+		wkbHex: string,
 	): { minLat: number; maxLat: number; minLng: number; maxLng: number } | null {
 		try {
 			const bytes = hexToBytes(wkbHex);
 			const view = new DataView(
 				bytes.buffer,
 				bytes.byteOffset,
-				bytes.byteLength
+				bytes.byteLength,
 			);
 
 			let minLng = Number.POSITIVE_INFINITY;
@@ -339,38 +356,38 @@ const createIssueIcon = (isHovered: boolean) => {
 const createProfileIcon = (avatarUrl?: string) => {
 	return L.divIcon({
 		html: `
-			<div class="relative">
-				<div class="w-10 h-10 bg-blue-600 rounded-full border-3 border-white shadow-xl flex items-center justify-center">
-					${
-						avatarUrl
-							? `<img src="${avatarUrl}" class="w-8 h-8 rounded-full object-cover" />`
-							: `<svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-						<path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-					</svg>`
-					}
+			<div class="relative flex items-center justify-center">
+				<div class="w-14 h-14 rounded-full bg-white shadow-2xl flex items-center justify-center">
+					<div class="w-12 h-12 rounded-full border-4 border-blue-500 flex items-center justify-center overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600">
+						${
+							avatarUrl ?
+								`<img src="${avatarUrl}" class="w-full h-full object-cover" />`
+							:	`
+							<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+								<path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+							</svg>`
+						}
+					</div>
 				</div>
-				<div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-6 border-l-transparent border-r-transparent border-t-blue-600"></div>
 			</div>
 		`,
 		className: "custom-div-icon profile-marker",
-		iconSize: [40, 48],
-		iconAnchor: [20, 48],
+		iconSize: [56, 56],
+		iconAnchor: [28, 28],
 	});
 };
 
 // Convert district to GeoJSON Feature
 function districtToFeature(
 	district: FederalDistrictGeo | ProvincialDistrictGeo | MunicipalDistrictGeo,
-	level: "federal" | "provincial" | "municipal"
+	level: "federal" | "provincial" | "municipal",
 ): GeoJSON.Feature | null {
 	if (!district.geometry) return null;
 
 	const name =
-		"name_en" in district
-			? district.name_en
-			: "name" in district
-			? district.name
-			: "Unknown";
+		"name_en" in district ? district.name_en
+		: "name" in district ? district.name
+		: "Unknown";
 
 	return {
 		type: "Feature",
@@ -438,7 +455,7 @@ function DistrictLayer({
 						<h4 class="font-semibold text-sm">${name}</h4>
 						${borough ? `<p class="text-xs text-gray-600">${borough}</p>` : ""}
 						<p class="text-xs text-gray-500 mt-1">${colors.name}</p>
-					</div>`
+					</div>`,
 				);
 			}}
 		/>
@@ -464,11 +481,61 @@ export function MapDrawer({
 		municipal: true,
 	});
 	const [showLegend, setShowLegend] = useState(true);
+	const [communityVisibility, setCommunityVisibility] = useState(true);
+	const [communityMembers, setCommunityMembers] = useState<CommunityMember[]>(
+		[],
+	);
+	const [communityLoading, setCommunityLoading] = useState(false);
+	const [privacyNoticeDismissed, setPrivacyNoticeDismissed] = useState(false);
+
+	useEffect(() => {
+		if (isOpen) {
+			setPrivacyNoticeDismissed(false);
+		}
+	}, [isOpen]);
+
+	useEffect(() => {
+		if (!communityVisibility) {
+			setCommunityMembers([]);
+			return;
+		}
+
+		let isMounted = true;
+		setCommunityLoading(true);
+
+		async function fetchCommunityMembers() {
+			try {
+				const res = await fetch("/api/community-members");
+				const data = await res.json();
+				if (!isMounted) return;
+				setCommunityMembers(data.members || []);
+			} catch (err) {
+				console.error("Failed to fetch community members:", err);
+			} finally {
+				if (isMounted) {
+					setCommunityLoading(false);
+				}
+			}
+		}
+
+		fetchCommunityMembers();
+
+		return () => {
+			isMounted = false;
+		};
+	}, [communityVisibility]);
 
 	// Toggle layer visibility
-	const toggleLayer = useCallback((layer: keyof LayerVisibility) => {
-		setLayerVisibility((prev) => ({ ...prev, [layer]: !prev[layer] }));
-	}, []);
+	const toggleLayer = useCallback(
+		(layer: keyof LayerVisibility | "community") => {
+			if (layer === "community") {
+				setCommunityVisibility((prev) => !prev);
+				return;
+			}
+			setLayerVisibility((prev) => ({ ...prev, [layer]: !prev[layer] }));
+		},
+		[],
+	);
 
 	if (!isOpen) return null;
 
@@ -480,7 +547,7 @@ export function MapDrawer({
 		})
 		.filter(
 			(item): item is { issue: Issue; position: [number, number] } =>
-				item !== null
+				item !== null,
 		);
 
 	const issuePoints = issuePositions.map((p) => p.position);
@@ -525,8 +592,32 @@ export function MapDrawer({
 					</Button>
 				</div>
 
+				{/* Privacy Notice */}
+				{profileLocation?.coord &&
+					layerVisibility.profile &&
+					!privacyNoticeDismissed && (
+						<div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border-b border-blue-100 text-blue-800">
+							<ShieldCheck className="w-4 h-4 flex-shrink-0" />
+							<p className="text-xs flex-1">
+								Showing a ~200 m range around your approximate location. Your
+								exact location is <strong>private</strong> and visible{" "}
+								<strong>only by you</strong>.
+							</p>
+							<button
+								type="button"
+								className="p-1 text-blue-800 transition hover:text-blue-900"
+								onClick={() => setPrivacyNoticeDismissed(true)}
+								aria-label="Dismiss privacy notice"
+							>
+								<X className="w-3.5 h-3.5" />
+							</button>
+						</div>
+					)}
+
 				{/* Map Container */}
-				<div className="relative h-[calc(100vh-80px)] bg-slate-100">
+				<div
+					className={`relative ${profileLocation?.coord && layerVisibility.profile ? "h-[calc(100vh-120px)]" : "h-[calc(100vh-80px)]"} bg-slate-100`}
+				>
 					<MapContainer
 						center={[centerLat, centerLng]}
 						zoom={15}
@@ -565,27 +656,47 @@ export function MapDrawer({
 							/>
 						)}
 
-						{/* Profile Location Marker */}
+						{/* Profile Location - Radius Circle (privacy-friendly) */}
 						{profileLocation?.coord && layerVisibility.profile && (
-							<Marker
-								position={[
-									profileLocation.coord.lat,
-									profileLocation.coord.lng,
-								]}
-								icon={createProfileIcon(profileLocation.avatar_url)}
-							>
-								<Popup>
-									<div className="p-2 min-w-[150px]">
-										<div className="flex items-center gap-2 mb-1">
-											<User className="w-4 h-4 text-blue-600" />
-											<h4 className="font-semibold text-sm">
-												{profileLocation.username || "Your Location"}
-											</h4>
+							<>
+								<Circle
+									center={[
+										profileLocation.coord.lat,
+										profileLocation.coord.lng,
+									]}
+									radius={200}
+									pathOptions={{
+										color: "#2563eb",
+										fillColor: "#3b82f6",
+										fillOpacity: 0.12,
+										weight: 2,
+										dashArray: "6 4",
+									}}
+								>
+									<Popup>
+										<div className="p-2 min-w-[180px]">
+											<div className="flex items-center gap-2 mb-1">
+												<User className="w-4 h-4 text-blue-600" />
+												<h4 className="font-semibold text-sm">
+													{profileLocation.username || "Your Location"}
+												</h4>
+											</div>
+											<p className="text-xs text-gray-500">
+												~200 m approximate area
+											</p>
 										</div>
-										<p className="text-xs text-gray-500">Home Location</p>
-									</div>
-								</Popup>
-							</Marker>
+									</Popup>
+								</Circle>
+								<Marker
+									interactive={false}
+									zIndexOffset={1000}
+									position={[
+										profileLocation.coord.lat,
+										profileLocation.coord.lng,
+									]}
+									icon={createProfileIcon(profileLocation.avatar_url)}
+								/>
+							</>
 						)}
 
 						{/* Issue Markers */}
@@ -630,7 +741,20 @@ export function MapDrawer({
 									</Marker>
 								);
 							})}
+
+						{/* Community Members */}
+						{communityVisibility && communityMembers.length > 0 && (
+							<CommunityClusterLayer members={communityMembers} />
+						)}
 					</MapContainer>
+
+					{communityVisibility && communityLoading && (
+						<div className="absolute inset-0 pointer-events-none flex items-start justify-center mt-6">
+							<div className="bg-white/90 px-3 py-1.5 rounded-full text-xs text-muted-foreground shadow">
+								Loading community members…
+							</div>
+						</div>
+					)}
 
 					{/* Enhanced Map Legend */}
 					{showLegend && (
@@ -661,15 +785,20 @@ export function MapDrawer({
 											!layerVisibility.profile ? "opacity-50" : ""
 										}`}
 									>
-										<div className="w-5 h-5 bg-blue-600 rounded-full border-2 border-white shadow flex items-center justify-center">
-											<User className="w-2.5 h-2.5 text-white" />
-										</div>
-										<span className="text-xs flex-1">Your Location</span>
-										{layerVisibility.profile ? (
+										<div
+											className="w-5 h-5 rounded-full border-2"
+											style={{
+												borderColor: "#2563eb",
+												backgroundColor: "#3b82f620",
+												borderStyle: "dashed",
+											}}
+										/>
+										<span className="text-xs flex-1">
+											Your Location (~200m radius)
+										</span>
+										{layerVisibility.profile ?
 											<Eye className="w-3 h-3 text-gray-400" />
-										) : (
-											<EyeOff className="w-3 h-3 text-gray-400" />
-										)}
+										:	<EyeOff className="w-3 h-3 text-gray-400" />}
 									</button>
 								)}
 
@@ -687,11 +816,29 @@ export function MapDrawer({
 									<span className="text-xs flex-1">
 										Issues ({issuePositions.length})
 									</span>
-									{layerVisibility.issues ? (
+									{layerVisibility.issues ?
 										<Eye className="w-3 h-3 text-gray-400" />
-									) : (
-										<EyeOff className="w-3 h-3 text-gray-400" />
-									)}
+									:	<EyeOff className="w-3 h-3 text-gray-400" />}
+								</button>
+
+								{/* Community Members */}
+								<button
+									onClick={() => toggleLayer("community")}
+									className={`flex items-center gap-2 w-full text-left p-1.5 rounded hover:bg-gray-50 transition-colors ${
+										communityVisibility ? "" : "opacity-50"
+									}`}
+								>
+									<div
+										className="w-5 h-5 rounded-full border-2"
+										style={{
+											borderColor: "#111827",
+											backgroundColor: "#11182720",
+										}}
+									/>
+									<span className="text-xs flex-1">Community Members</span>
+									{communityVisibility ?
+										<Eye className="w-3 h-3 text-gray-400" />
+									:	<EyeOff className="w-3 h-3 text-gray-400" />}
 								</button>
 							</div>
 
@@ -720,11 +867,9 @@ export function MapDrawer({
 											<span className="text-xs flex-1">
 												Federal ({districts.federal.length})
 											</span>
-											{layerVisibility.federal ? (
+											{layerVisibility.federal ?
 												<Eye className="w-3 h-3 text-gray-400" />
-											) : (
-												<EyeOff className="w-3 h-3 text-gray-400" />
-											)}
+											:	<EyeOff className="w-3 h-3 text-gray-400" />}
 										</button>
 									)}
 
@@ -746,11 +891,9 @@ export function MapDrawer({
 											<span className="text-xs flex-1">
 												Provincial ({districts.provincial.length})
 											</span>
-											{layerVisibility.provincial ? (
+											{layerVisibility.provincial ?
 												<Eye className="w-3 h-3 text-gray-400" />
-											) : (
-												<EyeOff className="w-3 h-3 text-gray-400" />
-											)}
+											:	<EyeOff className="w-3 h-3 text-gray-400" />}
 										</button>
 									)}
 
@@ -772,11 +915,9 @@ export function MapDrawer({
 											<span className="text-xs flex-1">
 												Municipal ({districts.municipal.length})
 											</span>
-											{layerVisibility.municipal ? (
+											{layerVisibility.municipal ?
 												<Eye className="w-3 h-3 text-gray-400" />
-											) : (
-												<EyeOff className="w-3 h-3 text-gray-400" />
-											)}
+											:	<EyeOff className="w-3 h-3 text-gray-400" />}
 										</button>
 									)}
 								</div>
@@ -804,4 +945,91 @@ export function MapDrawer({
 			</div>
 		</>
 	);
+}
+
+const communityMemberIcon = L.divIcon({
+	html: `<div style="
+		background: #1a1a1a;
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		border: 2px solid white;
+		box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+	"></div>`,
+	className: "community-member-icon",
+	iconSize: L.point(10, 10),
+	iconAnchor: L.point(5, 5),
+});
+
+function createCommunityClusterIcon(cluster: L.MarkerCluster) {
+	const count = cluster.getChildCount();
+	let size = 40;
+	let fontSize = "14px";
+
+	if (count >= 1000) {
+		size = 60;
+		fontSize = "16px";
+	} else if (count >= 100) {
+		size = 52;
+		fontSize = "15px";
+	} else if (count >= 10) {
+		size = 44;
+		fontSize = "14px";
+	}
+
+	const displayCount =
+		count >= 1000 ? `${Math.round(count / 1000)}k` : count.toString();
+
+	return L.divIcon({
+		html: `<div style="
+			background: #1a1a1a;
+			color: white;
+			border-radius: 50%;
+			width: ${size}px;
+			height: ${size}px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: ${fontSize};
+			font-weight: 700;
+			box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+			border: 3px solid rgba(255,255,255,0.9);
+		">${displayCount}</div>`,
+		className: "community-cluster-icon",
+		iconSize: L.point(size, size),
+	});
+}
+
+function CommunityClusterLayer({ members }: { members: CommunityMember[] }) {
+	const map = useMap();
+
+	useEffect(() => {
+		if (members.length === 0) return;
+
+		const markers = L.markerClusterGroup({
+			iconCreateFunction: createCommunityClusterIcon,
+			maxClusterRadius: 80,
+			spiderfyOnMaxZoom: false,
+			showCoverageOnHover: false,
+			zoomToBoundsOnClick: true,
+			disableClusteringAtZoom: 16,
+			chunkedLoading: true,
+			animate: true,
+		});
+
+		members.forEach((member) => {
+			const marker = L.marker([member.lat, member.lng], {
+				icon: communityMemberIcon,
+			});
+			markers.addLayer(marker);
+		});
+
+		map.addLayer(markers);
+
+		return () => {
+			map.removeLayer(markers);
+		};
+	}, [map, members]);
+
+	return null;
 }

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Button } from "./ui/button";
 import { NotificationPanel } from "./NotificationPanel";
 import { useAuth } from "@/context/AuthContext";
+import { createClient } from "@/lib/supabaseClient";
 
 export function NotificationBell() {
 	const { user } = useAuth();
@@ -24,18 +25,30 @@ export function NotificationBell() {
 
 	// Poll for unread count
 	useEffect(() => {
-		if (!user) return;
+		if (!user) {
+			setUnreadCount(0);
+			return;
+		}
+
+		const supabase = createClient();
 
 		const fetchUnreadCount = async () => {
 			// Only fetch if document is visible and panel is closed
 			if (document.visibilityState !== "visible" || isOpen) return;
 
 			try {
-				const res = await fetch("/api/notifications/unread-count");
-				if (res.ok) {
-					const { count } = await res.json();
-					setUnreadCount(count);
+				const { count, error } = await supabase
+					.from("notifications")
+					.select("*", { count: "exact", head: true })
+					.eq("read", false)
+					.eq("user_id", user.id);
+
+				if (error) {
+					console.error("Error fetching unread count:", error);
+					return;
 				}
+
+				setUnreadCount(count || 0);
 			} catch (error) {
 				console.error("Error fetching unread count:", error);
 			}
@@ -64,13 +77,21 @@ export function NotificationBell() {
 	// Refetch count when panel closes
 	useEffect(() => {
 		if (!isOpen && user) {
+			const supabase = createClient();
 			const fetchCount = async () => {
 				try {
-					const res = await fetch("/api/notifications/unread-count");
-					if (res.ok) {
-						const { count } = await res.json();
-						setUnreadCount(count);
+					const { count, error } = await supabase
+						.from("notifications")
+						.select("*", { count: "exact", head: true })
+						.eq("read", false)
+						.eq("user_id", user.id);
+
+					if (error) {
+						console.error("Error fetching unread count:", error);
+						return;
 					}
+
+					setUnreadCount(count || 0);
 				} catch (error) {
 					console.error("Error fetching unread count:", error);
 				}
@@ -88,7 +109,12 @@ export function NotificationBell() {
 			className="relative p-2 hover:bg-gray-100 rounded-full"
 			onClick={isMobile ? () => setIsOpen(!isOpen) : undefined}
 		>
-			<Image src="/Notifications.png" alt="Notification Bell" width={28} height={28} />
+			<Image
+				src="/Notifications.png"
+				alt="Notification Bell"
+				width={28}
+				height={28}
+			/>
 			{unreadCount > 0 && (
 				<span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
 					{unreadCount > 9 ? "9+" : unreadCount}

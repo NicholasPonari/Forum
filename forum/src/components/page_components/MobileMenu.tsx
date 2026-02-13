@@ -2,7 +2,9 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { User } from "@supabase/supabase-js";
-import { Shield } from "lucide-react";
+import { Shield, Languages } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { createClient } from "@/lib/supabaseClient";
 
 interface MobileMenuProps {
 	setModalOpen?: (open: boolean) => void;
@@ -18,11 +20,30 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
 	profileType,
 }) => {
 	const [open, setOpen] = React.useState(false);
-	const upgradeHref = user
-		? `/signup/verified?mode=upgrade&returnTo=${encodeURIComponent(
-				`/profile/${user.id}`
-		  )}`
-		: "/signup/verified";
+	const { profile, refreshProfile } = useAuth();
+	const upgradeHref =
+		user ?
+			`/signup/verified?mode=upgrade&returnTo=${encodeURIComponent(
+				`/profile/${user.id}`,
+			)}`
+		:	"/signup/verified";
+
+	const handleLanguageChange = async (language: string) => {
+		if (!profile) return;
+
+		const supabase = createClient();
+		const { error } = await supabase
+			.from("profiles")
+			.update({ language })
+			.eq("id", profile.id);
+
+		if (!error) {
+			await refreshProfile();
+		} else {
+			console.error("Error updating language:", error);
+		}
+		setOpen(false);
+	};
 
 	return (
 		<div className="relative">
@@ -48,8 +69,31 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
 			</button>
 			{open && (
 				<div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-xl py-3 px-4 flex flex-col gap-2 min-w-[200px] z-[100] border border-gray-100">
-					{user ? (
+					{user ?
 						<>
+							<div className="flex flex-col gap-1 border-b border-gray-100 pb-2 mb-2">
+								<div className="text-xs font-medium text-gray-500 px-3 py-1">
+									Language
+								</div>
+								<div className="flex gap-1 px-3">
+									<Button
+										variant={profile?.language === "en" ? "default" : "ghost"}
+										size="sm"
+										className="flex-1 h-8 text-xs"
+										onClick={() => handleLanguageChange("en")}
+									>
+										English
+									</Button>
+									<Button
+										variant={profile?.language === "fr" ? "default" : "ghost"}
+										size="sm"
+										className="flex-1 h-8 text-xs"
+										onClick={() => handleLanguageChange("fr")}
+									>
+										Français
+									</Button>
+								</div>
+							</div>
 							<Link href="/about" onClick={() => setOpen(false)}>
 								<Button variant="ghost" className="w-full justify-start">
 									About Us
@@ -86,8 +130,30 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
 								Sign Out
 							</Button>
 						</>
-					) : (
-						<>
+					:	<>
+							<div className="flex flex-col gap-1 border-b border-gray-100 pb-2 mb-2">
+								<div className="text-xs font-medium text-gray-500 px-3 py-1">
+									Language
+								</div>
+								<div className="flex gap-1 px-3">
+									<Button
+										variant="ghost"
+										size="sm"
+										className="flex-1 h-8 text-xs"
+										onClick={() => handleLanguageChange("en")}
+									>
+										English
+									</Button>
+									<Button
+										variant="ghost"
+										size="sm"
+										className="flex-1 h-8 text-xs"
+										onClick={() => handleLanguageChange("fr")}
+									>
+										Français
+									</Button>
+								</div>
+							</div>
 							<Link href="/about" onClick={() => setOpen(false)}>
 								<Button variant="ghost" className="w-full justify-start">
 									About Us
@@ -114,7 +180,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
 								Log In
 							</Button>
 						</>
-					)}
+					}
 				</div>
 			)}
 		</div>

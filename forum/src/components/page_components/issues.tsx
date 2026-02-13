@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import dynamic from "next/dynamic";
 import { IssueCard } from "../IssueCard";
 import {
 	VoteMap,
@@ -16,6 +18,11 @@ import { useLogoTransition } from "@/hooks/use-logo-transition";
 import { useIssueFilters } from "@/hooks/use-issue-filters";
 import { IssuesHero } from "@/components/issues/IssuesHero";
 import { FilterBar } from "@/components/issues/FilterBar";
+
+const MapDrawer = dynamic(
+	() => import("@/components/MapDrawer").then((mod) => mod.MapDrawer),
+	{ ssr: false },
+);
 
 interface IssuesProps {
 	issues: Issue[];
@@ -34,7 +41,10 @@ export default function Issues({
 	voteBreakdown,
 	commentsCount,
 	headerLogoRef,
+	mapDistricts,
+	profileLocation,
 }: IssuesProps) {
+	const [mapDrawerOpen, setMapDrawerOpen] = useState(false);
 	// Custom hook for filtering and sorting logic
 	const {
 		// State
@@ -80,6 +90,7 @@ export default function Issues({
 				onDistrictChange={setDistrictFilter}
 				onTypeChange={setTypeFilter}
 				onUserRoleChange={setUserRoleFilter}
+				onMapClick={() => setMapDrawerOpen(true)}
 			/>
 
 			<div className="space-y-1 mt-3 mx-0">
@@ -93,6 +104,16 @@ export default function Issues({
 					/>
 				))}
 			</div>
+			<MapDrawer
+				isOpen={mapDrawerOpen}
+				onClose={() => setMapDrawerOpen(false)}
+				issues={filteredIssues}
+				hoveredIssue={null}
+				voteBreakdown={voteBreakdown}
+				onIssueHover={() => {}}
+				profileLocation={profileLocation}
+				districts={mapDistricts}
+			/>
 		</section>
 	);
 }

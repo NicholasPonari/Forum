@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/sonner";
 import { Geist, Geist_Mono } from "next/font/google";
-import MyStatsig from "@/components/analytics/statsig";
 import { Analytics } from "@vercel/analytics/next";
 import { AuthProvider } from "@/context/AuthContext";
+import { PerfDebug } from "@/components/debug/PerfDebug";
 import "./globals.css";
+import MyStatsig from "@/components/analytics/statsig";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -32,6 +33,7 @@ export default function RootLayout({
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
+				<PerfDebug />
 				<AuthProvider>
 					<MyStatsig>{children}</MyStatsig>
 				</AuthProvider>
