@@ -356,22 +356,24 @@ const createIssueIcon = (isHovered: boolean) => {
 const createProfileIcon = (avatarUrl?: string) => {
 	return L.divIcon({
 		html: `
-			<div class="relative">
-				<div class="w-10 h-10 bg-blue-600 rounded-full border-3 border-white shadow-xl flex items-center justify-center">
-					${
-						avatarUrl ?
-							`<img src="${avatarUrl}" class="w-8 h-8 rounded-full object-cover" />`
-						:	`<svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-						<path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-					</svg>`
-					}
+			<div class="relative flex items-center justify-center">
+				<div class="w-14 h-14 rounded-full bg-white shadow-2xl flex items-center justify-center">
+					<div class="w-12 h-12 rounded-full border-4 border-blue-500 flex items-center justify-center overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600">
+						${
+							avatarUrl ?
+								`<img src="${avatarUrl}" class="w-full h-full object-cover" />`
+							:	`
+							<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+								<path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+							</svg>`
+						}
+					</div>
 				</div>
-				<div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-6 border-l-transparent border-r-transparent border-t-blue-600"></div>
 			</div>
 		`,
 		className: "custom-div-icon profile-marker",
-		iconSize: [40, 48],
-		iconAnchor: [20, 48],
+		iconSize: [56, 56],
+		iconAnchor: [28, 28],
 	});
 };
 
@@ -479,11 +481,18 @@ export function MapDrawer({
 		municipal: true,
 	});
 	const [showLegend, setShowLegend] = useState(true);
-	const [communityVisibility, setCommunityVisibility] = useState(false);
+	const [communityVisibility, setCommunityVisibility] = useState(true);
 	const [communityMembers, setCommunityMembers] = useState<CommunityMember[]>(
 		[],
 	);
 	const [communityLoading, setCommunityLoading] = useState(false);
+	const [privacyNoticeDismissed, setPrivacyNoticeDismissed] = useState(false);
+
+	useEffect(() => {
+		if (isOpen) {
+			setPrivacyNoticeDismissed(false);
+		}
+	}, [isOpen]);
 
 	useEffect(() => {
 		if (!communityVisibility) {
@@ -584,16 +593,26 @@ export function MapDrawer({
 				</div>
 
 				{/* Privacy Notice */}
-				{profileLocation?.coord && layerVisibility.profile && (
-					<div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border-b border-blue-100 text-blue-800">
-						<ShieldCheck className="w-4 h-4 flex-shrink-0" />
-						<p className="text-xs">
-							Showing a ~200 m range around your approximate location. Your
-							exact location is <strong>private</strong> and visible{" "}
-							<strong>only by you</strong>.
-						</p>
-					</div>
-				)}
+				{profileLocation?.coord &&
+					layerVisibility.profile &&
+					!privacyNoticeDismissed && (
+						<div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border-b border-blue-100 text-blue-800">
+							<ShieldCheck className="w-4 h-4 flex-shrink-0" />
+							<p className="text-xs flex-1">
+								Showing a ~200 m range around your approximate location. Your
+								exact location is <strong>private</strong> and visible{" "}
+								<strong>only by you</strong>.
+							</p>
+							<button
+								type="button"
+								className="p-1 text-blue-800 transition hover:text-blue-900"
+								onClick={() => setPrivacyNoticeDismissed(true)}
+								aria-label="Dismiss privacy notice"
+							>
+								<X className="w-3.5 h-3.5" />
+							</button>
+						</div>
+					)}
 
 				{/* Map Container */}
 				<div
@@ -639,31 +658,45 @@ export function MapDrawer({
 
 						{/* Profile Location - Radius Circle (privacy-friendly) */}
 						{profileLocation?.coord && layerVisibility.profile && (
-							<Circle
-								center={[profileLocation.coord.lat, profileLocation.coord.lng]}
-								radius={200}
-								pathOptions={{
-									color: "#2563eb",
-									fillColor: "#3b82f6",
-									fillOpacity: 0.12,
-									weight: 2,
-									dashArray: "6 4",
-								}}
-							>
-								<Popup>
-									<div className="p-2 min-w-[180px]">
-										<div className="flex items-center gap-2 mb-1">
-											<User className="w-4 h-4 text-blue-600" />
-											<h4 className="font-semibold text-sm">
-												{profileLocation.username || "Your Location"}
-											</h4>
+							<>
+								<Circle
+									center={[
+										profileLocation.coord.lat,
+										profileLocation.coord.lng,
+									]}
+									radius={200}
+									pathOptions={{
+										color: "#2563eb",
+										fillColor: "#3b82f6",
+										fillOpacity: 0.12,
+										weight: 2,
+										dashArray: "6 4",
+									}}
+								>
+									<Popup>
+										<div className="p-2 min-w-[180px]">
+											<div className="flex items-center gap-2 mb-1">
+												<User className="w-4 h-4 text-blue-600" />
+												<h4 className="font-semibold text-sm">
+													{profileLocation.username || "Your Location"}
+												</h4>
+											</div>
+											<p className="text-xs text-gray-500">
+												~200 m approximate area
+											</p>
 										</div>
-										<p className="text-xs text-gray-500">
-											~200 m approximate area
-										</p>
-									</div>
-								</Popup>
-							</Circle>
+									</Popup>
+								</Circle>
+								<Marker
+									interactive={false}
+									zIndexOffset={1000}
+									position={[
+										profileLocation.coord.lat,
+										profileLocation.coord.lng,
+									]}
+									icon={createProfileIcon(profileLocation.avatar_url)}
+								/>
+							</>
 						)}
 
 						{/* Issue Markers */}
