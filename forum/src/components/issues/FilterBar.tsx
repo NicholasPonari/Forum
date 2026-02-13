@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useMemo } from "react";
-import { Search, Building2, Home, MapPin, Globe } from "lucide-react";
+import { Search, Building2, Home, MapPin, Globe, Map } from "lucide-react";
 import {
 	Select,
 	SelectContent,
@@ -32,6 +32,9 @@ interface FilterBarProps {
 	onDistrictChange: (district: string | null) => void;
 	onTypeChange: (type: string | null) => void;
 	onUserRoleChange: (role: string | null) => void;
+
+	// Map
+	onMapClick?: () => void;
 }
 
 export function FilterBar({
@@ -49,6 +52,7 @@ export function FilterBar({
 	onDistrictChange,
 	onTypeChange,
 	onUserRoleChange,
+	onMapClick,
 }: FilterBarProps) {
 	const { t } = useTranslation();
 	const [isFilterSticky, setIsFilterSticky] = useState(false);
@@ -88,7 +92,7 @@ export function FilterBar({
 				icon: <MapPin className="w-4 h-4" />,
 			},
 		],
-		[t]
+		[t],
 	);
 
 	const userRoles = useMemo(
@@ -97,7 +101,7 @@ export function FilterBar({
 			{ value: "Politician", label: t.filter.politician },
 			{ value: "Candidate", label: t.filter.candidate },
 		],
-		[t]
+		[t],
 	);
 
 	// Track filter bar sticky behavior
@@ -130,15 +134,24 @@ export function FilterBar({
 						key={tab.level ?? "all"}
 						onClick={() => onLevelChange(tab.level)}
 						className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-							governmentLevel === tab.level
-								? "bg-primary text-white"
-								: "bg-gray-100 text-gray-600 hover:bg-gray-200"
+							governmentLevel === tab.level ?
+								"bg-primary text-white"
+							:	"bg-gray-100 text-gray-600 hover:bg-gray-200"
 						}`}
 					>
 						{tab.icon}
 						<span>{tab.label}</span>
 					</button>
 				))}
+				{onMapClick && (
+					<button
+						onClick={onMapClick}
+						className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200 ml-auto"
+					>
+						<Map className="w-4 h-4" />
+						<span>{t.common.viewOnMap}</span>
+					</button>
+				)}
 			</div>
 
 			{/* Desktop: Separate Search Bar */}
@@ -241,15 +254,23 @@ export function FilterBar({
 						key={tab.level ?? "all"}
 						onClick={() => onLevelChange(tab.level)}
 						className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-							governmentLevel === tab.level
-								? "bg-primary text-white"
-								: "bg-gray-100 text-gray-600"
+							governmentLevel === tab.level ?
+								"bg-primary text-white"
+							:	"bg-gray-100 text-gray-600"
 						}`}
 					>
 						{tab.icon}
 						<span>{tab.shortLabel}</span>
 					</button>
 				))}
+				{onMapClick && (
+					<button
+						onClick={onMapClick}
+						className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors bg-gray-100 text-gray-600 ml-auto"
+					>
+						<Map className="w-4 h-4" />
+					</button>
+				)}
 			</div>
 
 			{/* Mobile: Compact Filter Bar with Expandable Search */}
@@ -257,17 +278,17 @@ export function FilterBar({
 				ref={filterPlaceholderRef}
 				className="md:hidden mb-6"
 				style={
-					isFilterSticky
-						? { height: filterBarRef.current?.offsetHeight || "auto" }
-						: {}
+					isFilterSticky ?
+						{ height: filterBarRef.current?.offsetHeight || "auto" }
+					:	{}
 				}
 			>
 				<div
 					ref={filterBarRef}
 					className={`bg-black text-white overflow-hidden transition-all duration-200 p-2 ${
-						isFilterSticky
-							? "fixed top-16 left-0 right-0 z-40 rounded-none shadow-lg"
-							: "rounded-xl"
+						isFilterSticky ?
+							"fixed top-16 left-0 right-0 z-40 rounded-none shadow-lg"
+						:	"rounded-xl"
 					}`}
 					style={isFilterSticky ? { maxWidth: "100vw" } : {}}
 				>
@@ -345,9 +366,9 @@ export function FilterBar({
 					{/* Expandable Search Input */}
 					<div
 						className={`overflow-hidden transition-all duration-300 ease-in-out ${
-							isSearchExpanded
-								? "max-h-20 opacity-100 mt-2"
-								: "max-h-0 opacity-0"
+							isSearchExpanded ?
+								"max-h-20 opacity-100 mt-2"
+							:	"max-h-0 opacity-0"
 						}`}
 					>
 						<div className="px-1">

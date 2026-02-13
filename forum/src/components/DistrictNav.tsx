@@ -71,7 +71,7 @@ import { useTranslation } from "@/hooks/use-translation";
 // Dynamically import MapDrawer to avoid SSR issues with Leaflet
 const MapDrawer = dynamic(
 	() => import("@/components/MapDrawer").then((mod) => mod.MapDrawer),
-	{ ssr: false }
+	{ ssr: false },
 );
 
 // Types
@@ -132,7 +132,7 @@ export function DistrictNav({
 		return PROVINCES.filter(
 			(p) =>
 				p.name.toLowerCase().includes(placeSearch.toLowerCase()) ||
-				p.code.toLowerCase().includes(placeSearch.toLowerCase())
+				p.code.toLowerCase().includes(placeSearch.toLowerCase()),
 		);
 	}, [placeSearch]);
 
@@ -160,7 +160,7 @@ export function DistrictNav({
 				<div
 					className={cn(
 						"flex flex-col h-full bg-background border-r",
-						className
+						className,
 					)}
 				>
 					{/* Header with expand toggle */}
@@ -208,6 +208,12 @@ export function DistrictNav({
 							isActive={isPathActive("/d/municipal")}
 						/>
 						<CollapsedNavItem
+							href="/community"
+							icon={Users}
+							label={t.community.navLabel}
+							isActive={isPathActive("/community")}
+						/>
+						<CollapsedNavItem
 							href="/about"
 							icon={Compass}
 							label={t.nav.about}
@@ -226,7 +232,12 @@ export function DistrictNav({
 			className={cn("relative flex flex-col h-full bg-background", className)}
 		>
 			{/* Home */}
-			<NavItem href="/" icon={Home} label={t.nav.home} isActive={pathname === "/"} />
+			<NavItem
+				href="/"
+				icon={Home}
+				label={t.nav.home}
+				isActive={pathname === "/"}
+			/>
 			{/* Header with collapse toggle */}
 			{onCollapsedChange && (
 				<div className="relative flex items-center justify-end px-2 border-b shrink-0">
@@ -283,7 +294,10 @@ export function DistrictNav({
 												key={topic.id}
 												href={`/issues/${topic.id}?level=federal`}
 												icon={topic.icon}
-												label={t.topics[topic.id as keyof typeof t.topics] || topic.label}
+												label={
+													t.topics[topic.id as keyof typeof t.topics] ||
+													topic.label
+												}
 												isActive={isPathActive(`/issues/${topic.id}`)}
 												indent
 											/>
@@ -306,7 +320,9 @@ export function DistrictNav({
 													/>
 												</SelectTrigger>
 												<SelectContent>
-													<SelectItem value="all">{t.places.allProvinces}</SelectItem>
+													<SelectItem value="all">
+														{t.places.allProvinces}
+													</SelectItem>
 													{PROVINCES.map((p) => (
 														<SelectItem key={p.code} value={p.code}>
 															{p.name}
@@ -317,23 +333,27 @@ export function DistrictNav({
 										</div>
 										{TOPICS_LIST.map((topic) => {
 											const selectedProvinceName =
-												selectedProvinceCode === "all"
-													? null
-													: PROVINCES.find(
-														(p) => p.code === selectedProvinceCode
-													)?.name ?? null;
-											const provinceParam = selectedProvinceName
-												? `&province=${encodeURIComponent(
-													selectedProvinceName
-												)}`
-												: "";
+												selectedProvinceCode === "all" ? null : (
+													(PROVINCES.find(
+														(p) => p.code === selectedProvinceCode,
+													)?.name ?? null)
+												);
+											const provinceParam =
+												selectedProvinceName ?
+													`&province=${encodeURIComponent(
+														selectedProvinceName,
+													)}`
+												:	"";
 
 											return (
 												<NavItem
 													key={topic.id}
 													href={`/issues/${topic.id}?level=provincial${provinceParam}`}
 													icon={topic.icon}
-													label={t.topics[topic.id as keyof typeof t.topics] || topic.label}
+													label={
+														t.topics[topic.id as keyof typeof t.topics] ||
+														topic.label
+													}
 													isActive={isPathActive(`/issues/${topic.id}`)}
 													indent
 												/>
@@ -352,15 +372,17 @@ export function DistrictNav({
 											</p>
 										</div>
 										{TOPICS_LIST.map((topic) => {
-											const cityParam = userCity
-												? `&city=${encodeURIComponent(userCity)}`
-												: "";
+											const cityParam =
+												userCity ? `&city=${encodeURIComponent(userCity)}` : "";
 											return (
 												<NavItem
 													key={topic.id}
 													href={`/issues/${topic.id}?level=municipal${cityParam}`}
 													icon={topic.icon}
-													label={t.topics[topic.id as keyof typeof t.topics] || topic.label}
+													label={
+														t.topics[topic.id as keyof typeof t.topics] ||
+														topic.label
+													}
 													isActive={isPathActive(`/issues/${topic.id}`)}
 													indent
 												/>
@@ -430,11 +452,11 @@ export function DistrictNav({
 									<NavItem
 										key={province.code}
 										href={`/d/provincial?search=${encodeURIComponent(
-											province.name
+											province.name,
 										)}`}
 										label={province.name}
 										isActive={isPathActive(
-											`/places/${province.code.toLowerCase()}`
+											`/places/${province.code.toLowerCase()}`,
 										)}
 										indent
 									/>
@@ -480,25 +502,24 @@ export function DistrictNav({
 								isOpen={openSection === "myCivicMap"}
 								onToggle={() =>
 									setOpenSection(
-										openSection === "myCivicMap" ? null : "myCivicMap"
+										openSection === "myCivicMap" ? null : "myCivicMap",
 									)
 								}
 								badge={
-									user && !userDistricts
-										? undefined
-										: hasUserLocation
-											? undefined
-											: t.civicMap.forMembers
+									user && !userDistricts ? undefined
+									: hasUserLocation ?
+										undefined
+									:	t.civicMap.forMembers
 								}
 							/>
 						</CollapsibleTrigger>
 						<CollapsibleContent>
 							<div className="ml-2 mt-1 space-y-1">
-								{user && !userDistricts && !hasUserLocation ? (
+								{user && !userDistricts && !hasUserLocation ?
 									<div className="flex items-center justify-center py-4">
 										<Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
 									</div>
-								) : !user ? (
+								: !user ?
 									<div className="px-4 py-3 text-xs text-muted-foreground text-center">
 										<Users className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
 										<p className="font-medium text-foreground">
@@ -506,15 +527,13 @@ export function DistrictNav({
 										</p>
 										<p className="mt-1">{t.civicMap.signInPrompt}</p>
 									</div>
-								) : !hasUserLocation ? (
+								: !hasUserLocation ?
 									<div className="px-4 py-3 text-xs text-muted-foreground text-center">
 										<MapPin className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
 										<p className="font-medium text-foreground">
 											{t.civicMap.locationNotSet}
 										</p>
-										<p className="mt-1">
-											{t.civicMap.updateProfilePrompt}
-										</p>
+										<p className="mt-1">{t.civicMap.updateProfilePrompt}</p>
 										<Button
 											variant="outline"
 											size="sm"
@@ -527,8 +546,7 @@ export function DistrictNav({
 											</Link>
 										</Button>
 									</div>
-								) : (
-									<>
+								:	<>
 										{/* View on Map Button */}
 										<Button
 											variant="outline"
@@ -551,14 +569,14 @@ export function DistrictNav({
 												</div>
 												<NavItem
 													href={`${getLevelRoutePrefix("federal")}/${toSlug(
-														userDistricts.federal
+														userDistricts.federal,
 													)}`}
 													icon={Building2}
 													label={userDistricts.federal}
 													isActive={isPathActive(
 														`${getLevelRoutePrefix("federal")}/${toSlug(
-															userDistricts.federal
-														)}`
+															userDistricts.federal,
+														)}`,
 													)}
 													indent
 												/>
@@ -576,14 +594,14 @@ export function DistrictNav({
 												</div>
 												<NavItem
 													href={`${getLevelRoutePrefix("provincial")}/${toSlug(
-														userDistricts.provincial
+														userDistricts.provincial,
 													)}`}
 													icon={Landmark}
 													label={userDistricts.provincial}
 													isActive={isPathActive(
 														`${getLevelRoutePrefix("provincial")}/${toSlug(
-															userDistricts.provincial
-														)}`
+															userDistricts.provincial,
+														)}`,
 													)}
 													indent
 												/>
@@ -601,14 +619,14 @@ export function DistrictNav({
 												</div>
 												<NavItem
 													href={`${getLevelRoutePrefix("municipal")}/${toSlug(
-														userDistricts.municipalBorough
+														userDistricts.municipalBorough,
 													)}`}
 													icon={Building}
 													label={userDistricts.municipalBorough}
 													isActive={isPathActive(
 														`${getLevelRoutePrefix("municipal")}/${toSlug(
-															userDistricts.municipalBorough
-														)}`
+															userDistricts.municipalBorough,
+														)}`,
 													)}
 													indent
 												/>
@@ -626,21 +644,21 @@ export function DistrictNav({
 												</div>
 												<NavItem
 													href={`${getLevelRoutePrefix("municipal")}/${toSlug(
-														userDistricts.municipal
+														userDistricts.municipal,
 													)}`}
 													icon={MapPinned}
 													label={userDistricts.municipal}
 													isActive={isPathActive(
 														`${getLevelRoutePrefix("municipal")}/${toSlug(
-															userDistricts.municipal
-														)}`
+															userDistricts.municipal,
+														)}`,
 													)}
 													indent
 												/>
 											</div>
 										)}
 									</>
-								)}
+								}
 							</div>
 						</CollapsibleContent>
 					</Collapsible>
@@ -700,6 +718,14 @@ export function DistrictNav({
 							</div>
 						</CollapsibleContent>
 					</Collapsible>
+
+					{/* Community Map */}
+					<NavItem
+						href="/community"
+						icon={Users}
+						label={t.community.navLabel}
+						isActive={isPathActive("/community")}
+					/>
 				</div>
 			</ScrollArea>
 
@@ -720,7 +746,7 @@ export function DistrictNav({
 				issues={issues}
 				hoveredIssue={null}
 				voteBreakdown={voteBreakdown}
-				onIssueHover={() => { }}
+				onIssueHover={() => {}}
 				profileLocation={profileLocation}
 				districts={mapDistricts}
 			/>

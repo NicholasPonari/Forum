@@ -49,8 +49,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 		isMountedRef?: React.MutableRefObject<boolean>,
 	) => {
 		const now = Date.now();
-		const start = now;
-		console.log("[AuthProvider] fetchProfile START", { userId, start });
 		const guard = profileFetchGuardRef.current;
 		if (guard.inFlight && guard.userId === userId) {
 			return;
@@ -154,12 +152,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 			}
 		} catch (err) {
 		} finally {
-			const end = Date.now();
-			console.log("[AuthProvider] fetchProfile END", {
-				userId,
-				end,
-				duration: end - start,
-			});
 			profileFetchGuardRef.current = {
 				...profileFetchGuardRef.current,
 				inFlight: false,
@@ -178,8 +170,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 		isMountedRef.current = true;
 
 		const loadSession = async () => {
-			const start = Date.now();
-			console.log("[AuthProvider] loadSession START", { start });
 			try {
 				const sessionPromise = supabase.auth.getSession();
 				const timeoutPromise = new Promise<never>((_, reject) =>
@@ -226,11 +216,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 				setUser(null);
 				setProfile(null);
 			} finally {
-				const end = Date.now();
-				console.log("[AuthProvider] loadSession END", {
-					end,
-					duration: end - start,
-				});
 				if (isMountedRef.current) {
 					setLoading(false);
 				}

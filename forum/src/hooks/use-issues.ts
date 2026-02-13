@@ -38,7 +38,6 @@ export function useIssues() {
 
   const fetchIssuesAndVotes = useCallback(async () => {
     const start = Date.now();
-    console.log("[useIssues] fetchIssuesAndVotes START", { start });
     setLoading(true);
 
     try {
@@ -94,8 +93,6 @@ export function useIssues() {
     } catch (error) {
       console.error("[useIssues] Error loading issues feed:", error);
     } finally {
-      const end = Date.now();
-      console.log("[useIssues] fetchIssuesAndVotes END", { end, duration: end - start });
       setLoading(false);
     }
   }, []);

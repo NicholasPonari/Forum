@@ -154,6 +154,15 @@ export const translations = {
       instagramAlert: "Link copied! Open Instagram and paste the link in your story or post.",
       shareText: "{title} - Check out this post on our community forum!",
     },
+    community: {
+      title: "Community Map",
+      subtitle: "See how many verified community members are near you. You are not alone.",
+      membersTotal: "members across Canada",
+      privacyNotice: "All locations are randomized within a few kilometers. No one's exact address is ever shown.",
+      loading: "Loading community members...",
+      zoomHint: "Zoom in to see how many community members are in your area",
+      navLabel: "Community",
+    },
   },
   fr: {
     common: {
@@ -307,6 +316,15 @@ export const translations = {
       copied: "Lien copié !",
       instagramAlert: "Lien copié ! Ouvrez Instagram et collez le lien dans votre story ou message.",
       shareText: "{title} - Découvrez ce message sur notre forum communautaire !",
+    },
+    community: {
+      title: "Carte communautaire",
+      subtitle: "Voyez combien de membres vérifiés sont près de chez vous. Vous n'êtes pas seul.",
+      membersTotal: "membres à travers le Canada",
+      privacyNotice: "Tous les emplacements sont randomisés dans un rayon de quelques kilomètres. L'adresse exacte de personne n'est jamais affichée.",
+      loading: "Chargement des membres de la communauté...",
+      zoomHint: "Zoomez pour voir combien de membres sont dans votre région",
+      navLabel: "Communauté",
     },
   },
 };

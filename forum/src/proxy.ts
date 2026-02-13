@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 
 const ALLOWED_COUNTRIES = ['CA', 'US']; // Temporarily added US for YC access
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Get country from Vercel's geo object or header
   // Note: geo is available on Vercel Edge Runtime but not in local dev types
   const geo = (request as NextRequest & { geo?: { country?: string } }).geo;
@@ -32,8 +33,35 @@ export function proxy(request: NextRequest) {
   // const blockedUrl = new URL('/blocked', request.url);
   // return NextResponse.redirect(blockedUrl);
 
-  // Allow all requests to pass through temporarily
-  return NextResponse.next();
+  // Supabase auth middleware
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value);
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    },
+  );
+
+  // Refreshing the auth token
+  await supabase.auth.getUser();
+
+  return response;
 }
 
 export const config = {

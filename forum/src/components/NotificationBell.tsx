@@ -5,13 +5,13 @@ import Image from "next/image";
 import { Button } from "./ui/button";
 import { NotificationPanel } from "./NotificationPanel";
 import { useAuth } from "@/context/AuthContext";
+import { createClient } from "@/lib/supabaseClient";
 
 export function NotificationBell() {
 	const { user } = useAuth();
 	const [unreadCount, setUnreadCount] = useState(0);
 	const [isOpen, setIsOpen] = useState(false);
 	const [isMobile, setIsMobile] = useState(false);
-	const [disabledUntil, setDisabledUntil] = useState<number>(0);
 
 	// Detect mobile
 	useEffect(() => {
@@ -27,26 +27,28 @@ export function NotificationBell() {
 	useEffect(() => {
 		if (!user) {
 			setUnreadCount(0);
-			setDisabledUntil(0);
 			return;
 		}
+
+		const supabase = createClient();
 
 		const fetchUnreadCount = async () => {
 			// Only fetch if document is visible and panel is closed
 			if (document.visibilityState !== "visible" || isOpen) return;
-			if (Date.now() < disabledUntil) return;
 
 			try {
-				const res = await fetch("/api/notifications/unread-count");
-				if (res.status === 401) {
-					setUnreadCount(0);
-					setDisabledUntil(Date.now() + 10 * 60 * 1000);
+				const { count, error } = await supabase
+					.from("notifications")
+					.select("*", { count: "exact", head: true })
+					.eq("read", false)
+					.eq("user_id", user.id);
+
+				if (error) {
+					console.error("Error fetching unread count:", error);
 					return;
 				}
-				if (res.ok) {
-					const { count } = await res.json();
-					setUnreadCount(count);
-				}
+
+				setUnreadCount(count || 0);
 			} catch (error) {
 				console.error("Error fetching unread count:", error);
 			}
@@ -70,23 +72,26 @@ export function NotificationBell() {
 			clearInterval(interval);
 			document.removeEventListener("visibilitychange", handleVisibilityChange);
 		};
-	}, [user, isOpen, disabledUntil]);
+	}, [user, isOpen]);
 
 	// Refetch count when panel closes
 	useEffect(() => {
 		if (!isOpen && user) {
+			const supabase = createClient();
 			const fetchCount = async () => {
 				try {
-					const res = await fetch("/api/notifications/unread-count");
-					if (res.status === 401) {
-						setUnreadCount(0);
-						setDisabledUntil(Date.now() + 10 * 60 * 1000);
+					const { count, error } = await supabase
+						.from("notifications")
+						.select("*", { count: "exact", head: true })
+						.eq("read", false)
+						.eq("user_id", user.id);
+
+					if (error) {
+						console.error("Error fetching unread count:", error);
 						return;
 					}
-					if (res.ok) {
-						const { count } = await res.json();
-						setUnreadCount(count);
-					}
+
+					setUnreadCount(count || 0);
 				} catch (error) {
 					console.error("Error fetching unread count:", error);
 				}

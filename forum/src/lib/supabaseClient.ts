@@ -1,4 +1,4 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 let clientInstance: SupabaseClient | undefined;
@@ -59,7 +59,7 @@ export const createClient = (): SupabaseClient => {
     return clientInstance;
   }
 
-  clientInstance = createSupabaseClient(
+  clientInstance = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -76,5 +76,5 @@ export const createClient = (): SupabaseClient => {
     }
   );
 
-  return clientInstance;
+  return clientInstance!;
 };
