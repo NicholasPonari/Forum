@@ -8,8 +8,7 @@ COPY node-key /opt/besu/node-key-seed
 # Ensure data dir exists; entrypoint copies key on first start (so Railway volume doesn't hide it)
 RUN mkdir -p /opt/besu/data
 
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY --chmod=+x entrypoint.sh /entrypoint.sh
 
 # Run as root so entrypoint can copy key into volume; Besu will run as root (ok for "somewhat" production)
 USER root

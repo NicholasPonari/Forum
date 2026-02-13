@@ -49,14 +49,30 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      identityHash = blockchainIdentity.identity_hash;
+      const resolvedHash = blockchainIdentity.identity_hash;
+
+      if (!resolvedHash) {
+        return NextResponse.json({
+          exists: false,
+          onChain: null,
+          database: {
+            identityHash: null,
+            status: blockchainIdentity.status,
+            issuedAt: blockchainIdentity.issued_at,
+            txHash: blockchainIdentity.tx_hash,
+            blockNumber: blockchainIdentity.block_number,
+            chainId: blockchainIdentity.chain_id,
+          },
+          onChainError: "Identity hash missing from database record",
+        });
+      }
 
       // Verify on-chain
       const manager = getBlockchainIdentityManager();
       let onChainResult;
 
       try {
-        onChainResult = await manager.verifyOnChainIdentity(identityHash);
+        onChainResult = await manager.verifyOnChainIdentity(resolvedHash);
       } catch {
         // Blockchain node may be unreachable — return DB data only
         return NextResponse.json({
@@ -98,6 +114,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Hash was provided directly — verify on-chain
+    if (!identityHash) {
+      return NextResponse.json(
+        { error: "Identity hash is required" },
+        { status: 400 },
+      );
+    }
+
     const manager = getBlockchainIdentityManager();
 
     let onChainResult;
