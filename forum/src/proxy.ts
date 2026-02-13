@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
+const REFRESH_THROTTLE_MS = 60 * 1000; // only refresh once per minute per visitor
+const REFRESH_THROTTLE_COOKIE = 'sb-refresh-ts';
+
 const ALLOWED_COUNTRIES = ['CA', 'US']; // Temporarily added US for YC access
 
 export async function proxy(request: NextRequest) {
@@ -40,26 +43,43 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value);
-            response.cookies.set(name, value, options);
-          });
-        },
-      },
-    },
+  const now = Date.now();
+  const lastRefreshCookie = request.cookies.get(REFRESH_THROTTLE_COOKIE);
+  const lastRefresh = lastRefreshCookie ? Number.parseInt(lastRefreshCookie.value, 10) : null;
+  const refreshIsThrottled = Boolean(
+    lastRefresh && Number.isFinite(lastRefresh) && now - lastRefresh < REFRESH_THROTTLE_MS,
   );
 
-  // Refreshing the auth token
-  await supabase.auth.getUser();
+  if (!refreshIsThrottled) {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              request.cookies.set(name, value);
+              response.cookies.set(name, value, options);
+            });
+          },
+        },
+      },
+    );
+
+    // Refreshing the auth token
+    await supabase.auth.getUser();
+
+    response.cookies.set(REFRESH_THROTTLE_COOKIE, String(now), {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 60 * 60, // 1 hour, refreshed on every token refresh
+    });
+  }
 
   return response;
 }
