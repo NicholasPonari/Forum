@@ -87,7 +87,14 @@ npm run dev
 
 ## Production Deployment
 
-### Phase 1: Besu Node on VPS
+### Option A: Besu on Railway ("somewhat" production)
+
+If you host the forum on Vercel and want the blockchain node on Railway (same place as your face verification service):
+
+1. Follow **[besu-network/RAILWAY.md](../besu-network/RAILWAY.md)** for step-by-step Railway setup (Dockerfile, root directory, volume, deploy contract, env vars).
+2. Then run the DB migration and set Vercel env vars as in that guide.
+
+### Option B: Besu Node on VPS
 
 1. **Provision a VPS** (DigitalOcean, AWS EC2, etc.)
 
