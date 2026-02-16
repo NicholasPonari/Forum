@@ -391,6 +391,13 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             error: "Content recorded on-chain but database record failed",
+            details: {
+              message: dbError.message,
+              code: dbError.code,
+              details: dbError.details,
+              hint: dbError.hint,
+            },
+            recordId,
             txHash: result.txHash,
             retryable: true,
         }, { status: 500 });

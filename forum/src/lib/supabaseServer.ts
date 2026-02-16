@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 export async function createServerSupabaseClient() {
@@ -29,31 +30,19 @@ export async function createServerSupabaseClient() {
 }
 
 export async function createServiceRoleSupabaseClient() {
-	const cookieStore = await cookies();
-
+	const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 	const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+	if (!supabaseUrl) {
+		throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
+	}
 	if (!serviceRoleKey) {
 		throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
 	}
 
-	return createServerClient(
-		process.env.NEXT_PUBLIC_SUPABASE_URL!,
-		serviceRoleKey,
-		{
-			cookies: {
-				getAll() {
-					return cookieStore.getAll();
-				},
-				setAll(cookiesToSet) {
-					try {
-						cookiesToSet.forEach(({ name, value, options }) =>
-							cookieStore.set(name, value, options),
-						);
-					} catch {
-						// Ignore if called from a Server Component
-					}
-				},
-			},
+	return createClient(supabaseUrl, serviceRoleKey, {
+		auth: {
+			autoRefreshToken: false,
+			persistSession: false,
 		},
-	);
+	});
 }
