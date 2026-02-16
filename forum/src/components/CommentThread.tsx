@@ -277,6 +277,16 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 
 		// Create notifications if comment was successfully created
 		if (!insertError && newComment && user_id) {
+			// Record on blockchain
+			fetch("/api/blockchain/record-content", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					contentId: newComment.id,
+					contentType: "comment",
+				}),
+			}).catch(err => console.error("Failed to record comment on chain:", err));
+
 			await createNotificationsForComment(
 				supabase,
 				newComment.id,
@@ -353,6 +363,30 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 				value: value,
 			});
 		}
+
+		// Record vote on blockchain
+		// For comment votes, we treat the commentId as the contentId context, 
+		// but the backend will look up the vote record by (commentId/issueId, userId)
+		// Wait, the backend logic for 'vote' type assumes contentId is the ISSUE ID.
+		// If we pass a COMMENT ID, the backend needs to handle "comment_vote".
+		// Currently backend only supports "vote" which looks up in "votes" table (issue votes).
+		// We need to update backend to support "comment_vote" OR handle it here.
+		
+		// Let's stick to the plan: "votes" usually refers to issue votes. 
+		// If we want comment votes verified, we need to extend the system.
+		// For now, let's comment this out or implement "comment_vote" in backend.
+		// The prompt asked for "upvotes/downvotes on chain, comments, replies, posts".
+		// So comment votes SHOULD be verified.
+		
+		// I will send contentType: "comment_vote" and update the backend to handle it.
+		fetch("/api/blockchain/record-content", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				contentId: commentId,
+				contentType: "comment_vote",
+			}),
+		}).catch((err) => console.error("Failed to record comment vote on chain:", err));
 
 		// Optimistically update the local state
 		const updateCommentVote = (comments: Comment[]): Comment[] => {

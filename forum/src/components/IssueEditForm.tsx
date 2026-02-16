@@ -103,6 +103,20 @@ export function IssueEditForm({ issue, onSuccess }: IssueEditFormProps) {
 			return;
 		}
 
+		// Record update on blockchain
+		try {
+			fetch("/api/blockchain/record-content", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					contentId: issue.id.toString(), // Ensure string
+					contentType: "issue",
+				}),
+			}).catch((err) => console.error("Failed to record edit on chain:", err));
+		} catch (e) {
+			console.error("Blockchain recording error:", e);
+		}
+
 		setSubmitting(false);
 		toast.success("Post updated successfully!");
 		if (onSuccess) onSuccess();

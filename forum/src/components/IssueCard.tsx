@@ -25,6 +25,7 @@ import {
 	DialogFooter,
 } from "./ui/dialog";
 import { useTranslation } from "@/hooks/use-translation";
+import { BlockchainVerificationBadge } from "@/components/BlockchainVerificationBadge";
 
 export function IssueCard({
 	issue,
@@ -184,31 +185,39 @@ export function IssueCard({
 						{(issue.municipal_district ||
 							issue.provincial_district ||
 							issue.federal_district) && (
-							<div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
-								{issue.municipal_district && (
-									<Link
-										href={getDistrictUrl("municipal", issue.municipal_district)}
-										className="inline-flex items-center hover:text-primary hover:underline bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100"
-										onClick={(e) => e.stopPropagation()}
-									>
-										<MapPin className="w-3 h-3 mr-1 text-gray-400" />
-										{issue.municipal_district}
-									</Link>
-								)}
-								{issue.provincial_district && (
-									<Link
-										href={getDistrictUrl(
-											"provincial",
-											issue.provincial_district
-										)}
-										className="inline-flex items-center hover:text-primary hover:underline bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100"
-										onClick={(e) => e.stopPropagation()}
-									>
-										<Home className="w-3 h-3 mr-1 text-gray-400" />
-										{issue.provincial_district}
-									</Link>
-								)}
-							</div>
+							<>
+								<div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
+									{issue.municipal_district && (
+										<Link
+											href={getDistrictUrl("municipal", issue.municipal_district)}
+											className="inline-flex items-center hover:text-primary hover:underline bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100"
+											onClick={(e) => e.stopPropagation()}
+										>
+											<MapPin className="w-3 h-3 mr-1 text-gray-400" />
+											{issue.municipal_district}
+										</Link>
+									)}
+									{issue.provincial_district && (
+										<Link
+											href={getDistrictUrl(
+												"provincial",
+												issue.provincial_district
+											)}
+											className="inline-flex items-center hover:text-primary hover:underline bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100"
+											onClick={(e) => e.stopPropagation()}
+										>
+											<Home className="w-3 h-3 mr-1 text-gray-400" />
+											{issue.provincial_district}
+										</Link>
+									)}
+								</div>
+
+								<BlockchainVerificationBadge
+									contentId={issue.id.toString()}
+									contentType="issue"
+									className="h-5 w-5 ml-auto"
+								/>
+							</>
 						)}
 					</div>
 				</div>

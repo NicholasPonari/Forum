@@ -63,6 +63,17 @@ export function VoteButtons({
 			toast(t.vote.error);
 			return;
 		}
+
+		// Record on blockchain (optimistic, don't await)
+		fetch("/api/blockchain/record-content", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				contentId: issueId,
+				contentType: "vote",
+			}),
+		}).catch(err => console.error("Failed to record vote on chain:", err));
+
 		// Refetch upvote/downvote counts and user vote
 		const [{ data: voteData }, { data: userVoteData }] = await Promise.all([
 			supabase.from("votes").select("value").eq("issue_id", issueId),

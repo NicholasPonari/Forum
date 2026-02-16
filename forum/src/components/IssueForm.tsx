@@ -448,34 +448,62 @@ export function IssueForm({
 		}
 
 		// Insert issue
-		const { error: insertError } = await supabase.from("issues").insert({
-			type: values.type,
-			title: values.title,
-			narrative: values.narrative,
-			image_url,
-			video_url,
-			media_type: values.mediaType,
-			user_id: user.id,
-			location_lat: values.location?.lat || null,
-			location_lng: values.location?.lng || null,
-			municipal_district: municipalDistrict,
-			provincial_district: provincialDistrict,
-			federal_district: federalDistrict,
-			topic: topicSlug,
-			government_level: resolvedGovernmentLevel,
-			province:
-				values.location || resolvedGovernmentLevel !== "provincial"
-					? null
-					: values.province || null,
-			city:
-				values.location || resolvedGovernmentLevel !== "municipal"
-					? null
-					: values.city || null,
-		});
+		const { data: issueData, error: insertError } = await supabase
+			.from("issues")
+			.insert({
+				type: values.type,
+				title: values.title,
+				narrative: values.narrative,
+				image_url,
+				video_url,
+				media_type: values.mediaType,
+				user_id: user.id,
+				location_lat: values.location?.lat || null,
+				location_lng: values.location?.lng || null,
+				municipal_district: municipalDistrict,
+				provincial_district: provincialDistrict,
+				federal_district: federalDistrict,
+				topic: topicSlug,
+				government_level: resolvedGovernmentLevel,
+				province:
+					values.location || resolvedGovernmentLevel !== "provincial"
+						? null
+						: values.province || null,
+				city:
+					values.location || resolvedGovernmentLevel !== "municipal"
+						? null
+						: values.city || null,
+			})
+			.select()
+			.single();
+
 		if (insertError) {
 			setError("Could not submit issue");
 			setSubmitting(false);
 			return;
+		}
+
+		// Record on blockchain
+		try {
+			// Don't block UI for too long, but we want to ensure it starts
+			const blockchainPromise = fetch("/api/blockchain/record-content", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					contentId: issueData.id,
+					contentType: "issue",
+				}),
+			});
+
+			toast.promise(blockchainPromise, {
+				loading: "Anchoring to blockchain...",
+				success: "Issue permanently recorded on blockchain!",
+				error: "Issue created, but blockchain recording failed.",
+			});
+
+			await blockchainPromise;
+		} catch (e) {
+			console.error("Blockchain recording error:", e);
 		}
 
 		// Increment user score by 100 points

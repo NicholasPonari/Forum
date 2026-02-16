@@ -10,6 +10,7 @@ import { SlBubble } from "react-icons/sl";
 import { formatRelativeTime } from "@/lib/time-utils";
 import { User } from "lucide-react";
 import Link from "next/link";
+import { BlockchainVerificationBadge } from "@/components/BlockchainVerificationBadge";
 
 // Keep a local type matching the shape used in CommentThread
 export interface CommentNode {
@@ -173,6 +174,12 @@ export function CommentItem({
 							</span>
 						)}
 						<span>•</span>
+						<span>•</span>
+						<BlockchainVerificationBadge
+							contentId={comment.id}
+							contentType="comment"
+							className="h-4 w-4"
+						/>
 						<span>{formatRelativeTime(comment.created_at)}</span>
 					</div>
 

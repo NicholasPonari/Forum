@@ -12,6 +12,8 @@ export interface BlockchainConfig {
   issuerPrivateKey: string;
   /** Deployed DigitalIdentityRegistry contract address */
   contractAddress: string;
+  /** Deployed ContentRegistry contract address */
+  contentContractAddress: string;
   /** Chain ID of the blockchain network */
   chainId: number;
   /** Secret salt used to generate identity hashes (never changes) */
@@ -33,6 +35,8 @@ export function getBlockchainConfig(): BlockchainConfig {
   const issuerPrivateKey =
     process.env.BLOCKCHAIN_ISSUER_PRIVATE_KEY || DEV_PRIVATE_KEY;
   const contractAddress = process.env.BLOCKCHAIN_CONTRACT_ADDRESS || "";
+  const contentContractAddress =
+    process.env.BLOCKCHAIN_CONTENT_REGISTRY_ADDRESS || "";
   const chainId = parseInt(process.env.BLOCKCHAIN_CHAIN_ID || "1337", 10);
   const identitySalt =
     process.env.BLOCKCHAIN_IDENTITY_SALT || "voxvote-dev-salt";
@@ -47,10 +51,18 @@ export function getBlockchainConfig(): BlockchainConfig {
     );
   }
 
+  if (!contentContractAddress) {
+    console.warn(
+      "[BlockchainConfig] BLOCKCHAIN_CONTENT_REGISTRY_ADDRESS is not set. " +
+        "Deploy the content registry first and set the env var.",
+    );
+  }
+
   _config = {
     rpcUrl,
     issuerPrivateKey,
     contractAddress,
+    contentContractAddress,
     chainId,
     identitySalt,
     gasPriceWei,

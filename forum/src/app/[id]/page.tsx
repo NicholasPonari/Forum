@@ -59,6 +59,7 @@ import {
 } from "@/components/ui/dialog";
 import { IssueEditForm } from "@/components/IssueEditForm";
 import { cn } from "@/lib/utils";
+import { BlockchainVerificationBadge } from "@/components/BlockchainVerificationBadge";
 
 async function fetchIssue(id: string): Promise<DetailedIssue | null> {
 	const supabase = createClient();
@@ -552,6 +553,17 @@ export default function IssuePage() {
 			toast("Could not submit vote.");
 			return;
 		}
+
+		// Record vote on blockchain
+		fetch("/api/blockchain/record-content", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				contentId: issue.id.toString(),
+				contentType: "vote",
+			}),
+		}).catch((err) => console.error("Failed to record vote on chain:", err));
+
 		// refresh counts and user vote
 		const [{ data: voteData }, { data: userVoteData }] = await Promise.all([
 			supabase.from("votes").select("value").eq("issue_id", issue.id),
@@ -685,6 +697,12 @@ export default function IssuePage() {
 										</Link>
 									</>
 								)}
+								<span className="text-gray-400">•</span>
+								<BlockchainVerificationBadge
+									contentId={issue.id.toString()}
+									contentType="issue"
+									showLabel={false}
+								/>
 							</div>
 
 							{/* Three-dot menu for post owner */}
