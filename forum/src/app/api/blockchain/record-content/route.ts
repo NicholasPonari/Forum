@@ -190,6 +190,10 @@ export async function POST(request: NextRequest) {
                     error: "User has no verified blockchain identity",
                     retryable: true,
                     hint: "Complete identity issuance first",
+                    details: {
+                        verified: Boolean(profile?.verified),
+                        hasVerificationAttemptId: Boolean(profile?.verification_attempt_id),
+                    },
                 },
                 { status: 400 },
             );

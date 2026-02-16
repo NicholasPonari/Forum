@@ -76,7 +76,13 @@ export async function POST(request: NextRequest) {
 
       if (!profile.verified || !profile.verification_attempt_id) {
         return NextResponse.json(
-          { error: "Profile is not verified" },
+          {
+            error: "Profile is not verified",
+            details: {
+              verified: Boolean(profile.verified),
+              hasVerificationAttemptId: Boolean(profile.verification_attempt_id),
+            },
+          },
           { status: 403 },
         );
       }
