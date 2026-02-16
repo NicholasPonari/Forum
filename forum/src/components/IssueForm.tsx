@@ -485,26 +485,82 @@ export function IssueForm({
 
 		// Record on blockchain
 		try {
-			// Don't block UI for too long, but we want to ensure it starts
-			const blockchainPromise = fetch("/api/blockchain/record-content", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					contentId: issueData.id,
-					contentType: "issue",
-				}),
-			}).then(async (res) => {
-				if (!res.ok) {
-					let payload: any = null;
-					try {
-						payload = await res.json();
-					} catch {
-						payload = null;
-					}
-					throw new Error(payload?.error || payload?.details || `HTTP ${res.status}`);
+			const anchorIssueToBlockchain = async () => {
+				const recordRes = await fetch("/api/blockchain/record-content", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						contentId: issueData.id,
+						contentType: "issue",
+					}),
+				});
+
+				if (recordRes.ok) return recordRes;
+
+				let payload: any = null;
+				try {
+					payload = await recordRes.json();
+				} catch {
+					payload = null;
 				}
-				return res;
-			});
+
+				const isMissingIdentity =
+					recordRes.status === 400 &&
+					(payload?.error === "User has no verified blockchain identity" ||
+						String(payload?.error || "").toLowerCase().includes("no verified blockchain identity"));
+
+				if (isMissingIdentity) {
+					const retryIdentityRes = await fetch("/api/blockchain/retry", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ type: "identity" }),
+					});
+
+					if (!retryIdentityRes.ok) {
+						let retryPayload: any = null;
+						try {
+							retryPayload = await retryIdentityRes.json();
+						} catch {
+							retryPayload = null;
+						}
+						throw new Error(
+							retryPayload?.error ||
+								retryPayload?.details ||
+								`Identity bootstrap failed (HTTP ${retryIdentityRes.status})`,
+						);
+					}
+
+					const retryRecordRes = await fetch("/api/blockchain/record-content", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							contentId: issueData.id,
+							contentType: "issue",
+						}),
+					});
+
+					if (!retryRecordRes.ok) {
+						let retryRecordPayload: any = null;
+						try {
+							retryRecordPayload = await retryRecordRes.json();
+						} catch {
+							retryRecordPayload = null;
+						}
+						throw new Error(
+							retryRecordPayload?.error ||
+								retryRecordPayload?.details ||
+								`HTTP ${retryRecordRes.status}`,
+						);
+					}
+
+					return retryRecordRes;
+				}
+
+				throw new Error(payload?.error || payload?.details || `HTTP ${recordRes.status}`);
+			};
+
+			// Don't block UI for too long, but we want to ensure it starts
+			const blockchainPromise = anchorIssueToBlockchain();
 
 			toast.promise(blockchainPromise, {
 				loading: "Anchoring to blockchain...",

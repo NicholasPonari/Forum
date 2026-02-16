@@ -4,15 +4,16 @@ import {
   createServiceRoleSupabaseClient,
 } from "@/lib/supabaseServer";
 import { getBlockchainContentManager } from "@/lib/blockchain/content-manager";
+import { getBlockchainIdentityManager } from "@/lib/blockchain/identity-manager";
 
 /**
  * POST /api/blockchain/record-content
  *
  * Records user-generated content (Issue, Comment, Vote) on the blockchain.
  *
- * Body: { 
- *   contentId: string, 
- *   contentType: "issue" | "comment" | "vote" 
+ * Body: {
+ *   contentId: string,
+ *   contentType: "issue" | "comment" | "vote" | "comment_vote"
  * }
  *
  * Security:
@@ -172,9 +173,130 @@ export async function POST(request: NextRequest) {
         .eq("user_id", user.id)
         .eq("status", "active")
         .single();
-    
-    if (!identity) {
-        return NextResponse.json({ error: "User has no verified blockchain identity" }, { status: 400 });
+
+    let identityHash = identity?.identity_hash;
+
+    if (!identityHash) {
+        // Auto-bootstrap identity for verified users who don't yet have a blockchain identity row.
+        const { data: profile } = await supabase
+            .from("profiles")
+            .select("verified, verification_attempt_id, first_name, last_name, coord, type")
+            .eq("id", user.id)
+            .single();
+
+        if (!profile?.verified || !profile?.verification_attempt_id) {
+            return NextResponse.json(
+                {
+                    error: "User has no verified blockchain identity",
+                    retryable: true,
+                    hint: "Complete identity issuance first",
+                },
+                { status: 400 },
+            );
+        }
+
+        try {
+            const identityManager = getBlockchainIdentityManager();
+            const identityResult = await identityManager.issueIdentity(
+                user.id,
+                user.email || "",
+                profile.verification_attempt_id,
+            );
+
+            let parsedCoord: { lat: number; lng: number } | null = null;
+            if (profile.coord) {
+                try {
+                    parsedCoord =
+                        typeof profile.coord === "string"
+                            ? JSON.parse(profile.coord)
+                            : profile.coord;
+                } catch {
+                    parsedCoord = null;
+                }
+            }
+
+            const profileHash = identityManager.computeProfileHash(
+                user.id,
+                profile.first_name || "",
+                profile.last_name || "",
+                parsedCoord,
+                profile.type || "Resident",
+                profile.verified ?? false,
+            );
+
+            const { error: identityInsertError } = await serviceSupabase
+                .from("blockchain_identities")
+                .upsert({
+                    user_id: user.id,
+                    identity_hash: identityResult.identityHash,
+                    issuer_signature: identityResult.issuerSignature,
+                    tx_hash: identityResult.txHash,
+                    block_number: identityResult.blockNumber,
+                    contract_address: identityResult.contractAddress,
+                    chain_id: identityResult.chainId,
+                    status: "active",
+                    issued_at: new Date().toISOString(),
+                    verification_attempt_id: profile.verification_attempt_id,
+                    profile_hash: profileHash,
+                });
+
+            if (identityInsertError) {
+                await serviceSupabase.from("blockchain_audit_log").insert({
+                    user_id: user.id,
+                    action: "issue_failed",
+                    identity_hash: identityResult.identityHash,
+                    tx_hash: identityResult.txHash,
+                    error_message: `Auto-bootstrap identity DB insert failed: ${identityInsertError.message}`,
+                    metadata: { isAutoBootstrap: true, contentType, contentId: targetContentId },
+                });
+
+                return NextResponse.json(
+                    {
+                        error: "Identity issued on-chain but database record failed",
+                        txHash: identityResult.txHash,
+                        retryable: true,
+                    },
+                    { status: 500 },
+                );
+            }
+
+            await serviceSupabase.from("blockchain_audit_log").insert({
+                user_id: user.id,
+                action: "issue",
+                identity_hash: identityResult.identityHash,
+                tx_hash: identityResult.txHash,
+                metadata: {
+                    verificationAttemptId: profile.verification_attempt_id,
+                    isAutoBootstrap: true,
+                    trigger: "record-content",
+                },
+            });
+
+            identityHash = identityResult.identityHash;
+        } catch (bootstrapError: any) {
+            await serviceSupabase.from("blockchain_audit_log").insert({
+                user_id: user.id,
+                action: "issue_failed",
+                error_message: `Auto-bootstrap identity failed: ${bootstrapError?.message || "Unknown error"}`,
+                metadata: { isAutoBootstrap: true, contentType, contentId: targetContentId },
+            });
+
+            return NextResponse.json(
+                {
+                    error: "Failed to bootstrap blockchain identity",
+                    details: bootstrapError?.message || "Unknown error",
+                    retryable: true,
+                },
+                { status: 502 },
+            );
+        }
+    }
+
+    if (!identityHash) {
+        return NextResponse.json(
+            { error: "Missing blockchain identity after bootstrap attempt" },
+            { status: 500 },
+        );
     }
 
     // 6. Record on Blockchain
@@ -186,7 +308,7 @@ export async function POST(request: NextRequest) {
         result = await manager.recordContent(
             recordId, // Use the unique Record ID as the key on-chain
             contentHash,
-            identity.identity_hash,
+            identityHash,
             contentType
         );
     } catch (err: any) {
