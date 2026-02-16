@@ -371,6 +371,25 @@ export function IssueForm({
 		setError(null);
 		setUploadProgress(0);
 		const supabase = createClient();
+		const {
+			data: { user: authenticatedUser },
+			error: authUserError,
+		} = await supabase.auth.getUser();
+
+		if (authUserError || !authenticatedUser) {
+			setError("Your session expired. Please log in again.");
+			setSubmitting(false);
+			return;
+		}
+
+		if (authenticatedUser.id !== user.id) {
+			console.warn("IssueForm user/session mismatch detected", {
+				authContextUserId: user.id,
+				authenticatedUserId: authenticatedUser.id,
+			});
+		}
+
+		const authorUserId = authenticatedUser.id;
 		let image_url = null;
 		let video_url = null;
 
@@ -457,7 +476,7 @@ export function IssueForm({
 				image_url,
 				video_url,
 				media_type: values.mediaType,
-				user_id: user.id,
+				user_id: authorUserId,
 				location_lat: values.location?.lat || null,
 				location_lng: values.location?.lng || null,
 				municipal_district: municipalDistrict,
@@ -575,7 +594,7 @@ export function IssueForm({
 
 		// Increment user score by 100 points
 		const { error: scoreError } = await supabase.rpc("increment_score", {
-			user_id: user.id,
+			user_id: authorUserId,
 			points: 100,
 		});
 		if (scoreError) {

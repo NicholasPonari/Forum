@@ -243,6 +243,25 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 
 		setSubmitting(true);
 		const supabase = createClient();
+		const {
+			data: { user: authenticatedUser },
+			error: authUserError,
+		} = await supabase.auth.getUser();
+
+		if (authUserError || !authenticatedUser) {
+			console.error("Comment submit failed: missing authenticated user", authUserError);
+			setSubmitting(false);
+			return;
+		}
+
+		if (user_id && authenticatedUser.id !== user_id) {
+			console.warn("CommentThread user/session mismatch detected", {
+				propUserId: user_id,
+				authenticatedUserId: authenticatedUser.id,
+			});
+		}
+
+		const authorUserId = authenticatedUser.id;
 		let image_url = null;
 
 		// Handle image upload if present
@@ -265,7 +284,7 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 		const { data: newComment, error: insertError } = await supabase
 			.from("comments")
 			.insert({
-				user_id: user_id,
+				user_id: authorUserId,
 				issue_id: issueId,
 				parent_id: parentId,
 				content: replyContent,
@@ -276,7 +295,7 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 			.single();
 
 		// Create notifications if comment was successfully created
-		if (!insertError && newComment && user_id) {
+		if (!insertError && newComment) {
 			// Record on blockchain
 			fetch("/api/blockchain/record-content", {
 				method: "POST",
@@ -309,7 +328,7 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 				newComment.id,
 				issueId.toString(),
 				parentId,
-				user_id,
+				authorUserId,
 				replyContent
 			);
 		}
@@ -342,13 +361,31 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 		}
 
 		const supabase = createClient();
+		const {
+			data: { user: authenticatedUser },
+			error: authUserError,
+		} = await supabase.auth.getUser();
+
+		if (authUserError || !authenticatedUser) {
+			console.error("Comment vote failed: missing authenticated user", authUserError);
+			return;
+		}
+
+		if (user_id && authenticatedUser.id !== user_id) {
+			console.warn("CommentThread user/session mismatch detected during vote", {
+				propUserId: user_id,
+				authenticatedUserId: authenticatedUser.id,
+			});
+		}
+
+		const voterUserId = authenticatedUser.id;
 
 		// Check if user already voted on this comment
 		const { data: existingVote } = await supabase
 			.from("comment_votes")
 			.select("id, value")
 			.eq("comment_id", commentId)
-			.eq("user_id", user_id)
+			.eq("user_id", voterUserId)
 			.single();
 
 		// Calculate the vote change for optimistic update
@@ -376,7 +413,7 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 			newUserVote = value;
 			await supabase.from("comment_votes").insert({
 				comment_id: commentId,
-				user_id: user_id,
+				user_id: voterUserId,
 				value: value,
 			});
 		}
