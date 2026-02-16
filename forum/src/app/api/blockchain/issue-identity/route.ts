@@ -48,10 +48,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Verify user has a verified profile
+    // 4. Verify user has a verified profile and fetch core fields for profile hashing
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("id, verified, type, verification_attempt_id")
+      .select("id, verified, type, verification_attempt_id, first_name, last_name, coord")
       .eq("id", userId)
       .single();
 
@@ -119,7 +119,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 7. Store the blockchain identity record in the database
+    // 7. Compute profile hash to detect future tampering of core identity fields
+    let parsedCoord: { lat: number; lng: number } | null = null;
+    if (profile.coord) {
+      try {
+        parsedCoord = typeof profile.coord === "string"
+          ? JSON.parse(profile.coord)
+          : profile.coord;
+      } catch {
+        parsedCoord = null;
+      }
+    }
+
+    const profileHash = manager.computeProfileHash(
+      userId,
+      profile.first_name || "",
+      profile.last_name || "",
+      parsedCoord,
+      profile.type || "Resident",
+      profile.verified ?? false,
+    );
+
+    // 8. Store the blockchain identity record in the database
     const { error: insertError } = await supabase
       .from("blockchain_identities")
       .upsert({
@@ -132,6 +153,8 @@ export async function POST(request: NextRequest) {
         chain_id: result.chainId,
         status: "active",
         issued_at: new Date().toISOString(),
+        verification_attempt_id: verificationAttemptId,
+        profile_hash: profileHash,
       });
 
     if (insertError) {
@@ -143,21 +166,30 @@ export async function POST(request: NextRequest) {
       // Log for manual recovery.
       await supabase.from("blockchain_audit_log").insert({
         user_id: userId,
-        action: "issue",
+        action: "issue_failed",
         identity_hash: result.identityHash,
         tx_hash: result.txHash,
-        error_message: `DB insert failed: ${insertError.message}`,
+        error_message: `On-chain OK but DB insert failed: ${insertError.message}`,
         metadata: { ...result, dbInsertFailed: true },
       });
+
+      return NextResponse.json(
+        {
+          error: "Identity issued on-chain but database record failed",
+          txHash: result.txHash,
+          retryable: true,
+        },
+        { status: 500 },
+      );
     }
 
-    // 8. Update profile blockchain_verified flag
+    // 9. Update profile blockchain_verified flag
     await supabase
       .from("profiles")
       .update({ blockchain_verified: true })
       .eq("id", userId);
 
-    // 9. Log the successful issuance
+    // 10. Log the successful issuance
     await supabase.from("blockchain_audit_log").insert({
       user_id: userId,
       action: "issue",
@@ -167,6 +199,8 @@ export async function POST(request: NextRequest) {
         blockNumber: result.blockNumber,
         contractAddress: result.contractAddress,
         chainId: result.chainId,
+        verificationAttemptId,
+        profileHash,
       },
     });
 

@@ -6,13 +6,25 @@ This document covers the complete deployment process for the Vox.Vote blockchain
 
 ## System Components
 
-| Component        | Location                  | Purpose                    |
-| ---------------- | ------------------------- | -------------------------- |
-| Smart Contract   | `blockchain/contracts/`   | On-chain identity registry |
-| Besu Node        | `besu-network/`           | Private blockchain network |
-| Identity Manager | `src/lib/blockchain/`     | TypeScript service layer   |
-| API Routes       | `src/app/api/blockchain/` | HTTP endpoints             |
-| DB Migration     | `blockchain/migrations/`  | PostgreSQL schema          |
+| Component              | Location                              | Purpose                                     |
+| ---------------------- | ------------------------------------- | ------------------------------------------- |
+| Identity Contract      | `blockchain/contracts/DigitalIdentityRegistry.sol` | On-chain identity hashes + signatures |
+| Content Contract       | `blockchain/contracts/ContentRegistry.sol`         | On-chain content hashes (issues, comments, votes) |
+| Besu Node              | `besu-network/`                       | Private PoA blockchain network              |
+| Identity Manager       | `src/lib/blockchain/identity-manager.ts` | Identity issuance, revocation, profile hashing |
+| Content Manager        | `src/lib/blockchain/content-manager.ts`  | Content hashing + on-chain recording        |
+| Config                 | `src/lib/blockchain/config.ts`        | Environment-based blockchain config         |
+| API: Issue Identity    | `src/app/api/blockchain/issue-identity/` | Issue on-chain identity after verification |
+| API: Record Content    | `src/app/api/blockchain/record-content/` | Anchor content hashes to blockchain        |
+| API: Verify Content    | `src/app/api/blockchain/verify-content/` | Verify content integrity vs blockchain     |
+| API: Verify Profile    | `src/app/api/blockchain/verify-profile/` | Detect profile field tampering             |
+| API: Status            | `src/app/api/blockchain/status/`      | Health check + identity lookup              |
+| API: Retry             | `src/app/api/blockchain/retry/`       | Retry failed identity/content recordings    |
+| API: Integrity Check   | `src/app/api/blockchain/integrity-check/` | Batch verify profiles + content hashes   |
+| UI Badge               | `src/components/BlockchainVerificationBadge.tsx` | Shield icon showing verification status |
+| DB: identities         | `blockchain_identities`               | User → on-chain identity mapping            |
+| DB: content records    | `blockchain_content_records`          | Content → on-chain tx mapping               |
+| DB: audit log          | `blockchain_audit_log`                | Immutable audit trail of all operations     |
 
 ## Local Development Setup
 
@@ -157,14 +169,37 @@ Execute `blockchain/migrations/001_blockchain_identities.sql` in your production
 
 After deployment, verify each component:
 
+### Infrastructure
 - [ ] Besu node responds to JSON-RPC at the configured URL
-- [ ] Smart contract is deployed (check with `POST /api/blockchain/status`)
-- [ ] Database tables exist (`blockchain_identities`, `blockchain_audit_log`)
+- [ ] DigitalIdentityRegistry contract is deployed (`POST /api/blockchain/status`)
+- [ ] ContentRegistry contract is deployed (`BLOCKCHAIN_CONTENT_REGISTRY_ADDRESS` set)
+
+### Database
+- [ ] `blockchain_identities` table exists with `verification_attempt_id` and `profile_hash` columns
+- [ ] `blockchain_content_records` table exists with `user_id` column
+- [ ] `blockchain_audit_log` table has expanded action constraint (includes `record_content`, `verify_profile`, etc.)
 - [ ] `profiles` table has `blockchain_verified` column
-- [ ] Environment variables are set in Vercel/production
-- [ ] Test a verified signup creates an on-chain identity
-- [ ] Test signin shows blockchain verification status
-- [ ] Audit log records operations
+- [ ] RLS policies allow service_role INSERT on all blockchain tables
+- [ ] RLS policies allow public SELECT on `blockchain_identities` and `blockchain_content_records`
+
+### Environment Variables
+- [ ] `BLOCKCHAIN_RPC_URL` set
+- [ ] `BLOCKCHAIN_ISSUER_PRIVATE_KEY` set (never commit!)
+- [ ] `BLOCKCHAIN_CONTRACT_ADDRESS` set (DigitalIdentityRegistry)
+- [ ] `BLOCKCHAIN_CONTENT_REGISTRY_ADDRESS` set (ContentRegistry)
+- [ ] `BLOCKCHAIN_CHAIN_ID` set
+- [ ] `BLOCKCHAIN_IDENTITY_SALT` set (strong random, never changes)
+
+### End-to-End
+- [ ] Verified signup creates on-chain identity + stores `profile_hash` and `verification_attempt_id`
+- [ ] Creating an issue anchors its hash to the blockchain
+- [ ] Creating a comment anchors its hash to the blockchain
+- [ ] Casting a vote anchors its hash to the blockchain
+- [ ] `GET /api/blockchain/verify-content` detects tampered content (red shield)
+- [ ] `GET /api/blockchain/verify-profile` detects tampered profile fields
+- [ ] `POST /api/blockchain/integrity-check` batch-checks all profiles + content
+- [ ] `POST /api/blockchain/retry` successfully retries a failed identity issuance
+- [ ] Audit log records all operations with correct actions
 
 ## Troubleshooting
 

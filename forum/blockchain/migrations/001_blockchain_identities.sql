@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS public.blockchain_identities (
     status TEXT NOT NULL DEFAULT 'active',
     issued_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     revoked_at TIMESTAMPTZ,
+    verification_attempt_id UUID REFERENCES public.verification_attempts(id),
+    profile_hash TEXT,
 
     CONSTRAINT blockchain_identities_user_id_key UNIQUE (user_id),
     CONSTRAINT blockchain_identities_identity_hash_key UNIQUE (identity_hash),
@@ -47,7 +49,11 @@ CREATE TABLE IF NOT EXISTS public.blockchain_audit_log (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     CONSTRAINT blockchain_audit_log_action_check CHECK (
-        action IN ('issue', 'verify', 'revoke', 'issue_retry', 'issue_failed')
+        action IN (
+            'issue', 'verify', 'revoke', 'issue_retry', 'issue_failed',
+            'record_content', 'record_content_failed',
+            'verify_profile', 'profile_tamper_detected', 'integrity_check'
+        )
     )
 ) TABLESPACE pg_default;
 

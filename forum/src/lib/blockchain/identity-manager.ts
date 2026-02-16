@@ -81,6 +81,34 @@ export class BlockchainIdentityManager {
     return ethers.hexlify(hash);
   }
 
+  // ────────────────── Profile Hash Creation ──────────────────
+
+  /**
+   * Create a deterministic hash of the core verified profile fields.
+   *
+   * These are the immutable identity fields that should never change
+   * without re-verification. If any of these change in the DB without
+   * a corresponding re-issuance, it indicates tampering.
+   *
+   * Fields: userId, firstName, lastName, coord (lat/lng), type, verified
+   *
+   * Input:  SHA-256( profile:{userId}:{firstName}:{lastName}:{lat}:{lng}:{type}:{verified}:{salt} )
+   * Output: hex string (0x-prefixed)
+   */
+  computeProfileHash(
+    userId: string,
+    firstName: string,
+    lastName: string,
+    coord: { lat: number; lng: number } | null,
+    type: string,
+    verified: boolean,
+  ): string {
+    const lat = coord?.lat?.toString() ?? "null";
+    const lng = coord?.lng?.toString() ?? "null";
+    const data = `profile:${userId}:${firstName}:${lastName}:${lat}:${lng}:${type}:${verified}:${this.config.identitySalt}`;
+    return ethers.hexlify(createHash("sha256").update(data).digest());
+  }
+
   // ────────────────── Issue Identity ──────────────────────────
 
   /**

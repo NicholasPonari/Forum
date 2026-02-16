@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabaseServer";
 import { getBlockchainContentManager } from "@/lib/blockchain/content-manager";
-import { getBlockchainIdentityManager } from "@/lib/blockchain/identity-manager";
 
 /**
  * POST /api/blockchain/record-content
@@ -45,7 +44,8 @@ export async function POST(request: NextRequest) {
 
     // 3. Verify content ownership and fetch data for hashing
     let contentHash = "";
-    let contentCreatedAt = ""; 
+    let contentCreatedAt = "";
+    let targetContentId = contentId;
 
     if (contentType === "issue") {
       const { data: issue, error } = await supabase
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       }
 
       contentHash = getBlockchainContentManager().computeIssueHash(
-        issue.id.toString(), // Ensure string
+        issue.id.toString(),
         issue.title,
         issue.narrative,
         issue.type,
@@ -96,67 +96,34 @@ export async function POST(request: NextRequest) {
       contentCreatedAt = comment.created_at;
 
     } else if (contentType === "vote") {
-        // For votes, contentId might be the ID of the vote record itself if available,
-        // or we might look it up by issue_id + user_id. 
-        // Assuming contentId passed here is the 'id' from the 'votes' table (if it has one).
-        // If the client passes issueId, we need to handle that.
-        // Let's assume the client passes the UUID of the vote row. 
-        // If the 'votes' table doesn't have a UUID primary key exposed or used by client, we might need to change strategy.
-        // Based on VoteButtons.tsx: `upsert({ issue_id, user_id, value })`.
-        // The table definition wasn't fully visible but likely has an ID.
-        // If we don't have the vote ID on client, we can query by issue_id + user_id.
-        // Let's assume contentId is actually the issueId for votes, and we look up the user's vote on that issue.
-        
-        // However, the plan said "Call blockchain recording after vote cast".
-        // Let's try to find the vote record.
-        // If contentId is passed as the issueId, we look for the vote.
-        // Better: let the client pass { contentId: issueId, contentType: 'vote' }.
-        // But the `blockchain_content_records` table expects `content_id` to be unique per record. 
-        // If we use issueId as contentId for a vote, it conflicts with the issue itself.
-        // So we need the unique ID of the vote row.
-        
-        // Let's query the vote by issue_id (passed as contentId) and user_id.
+        // Client passes issueId as contentId for votes; we look up by (issue_id, user_id)
         const { data: vote, error } = await supabase
             .from("votes")
             .select("*")
-            .eq("issue_id", contentId) // Assuming contentId is issueId for vote context
+            .eq("issue_id", contentId)
             .eq("user_id", user.id)
             .single();
 
         if (error || !vote) {
              return NextResponse.json({ error: "Vote not found" }, { status: 404 });
         }
-        
-        // Use the vote's actual primary key (if exists) or composite. 
-        // If 'votes' table has 'id', use it. 
-        // Checking VoteButtons.tsx, it selects 'value', but doesn't show ID. 
-        // But likely there is an ID. 
-        // We will use vote.id as the true contentId for blockchain storage.
-        
+
         contentHash = getBlockchainContentManager().computeVoteHash(
             vote.issue_id.toString(),
             vote.user_id,
             vote.value,
-            vote.updated_at || vote.created_at // fallback
+            vote.updated_at || vote.created_at
         );
         contentCreatedAt = vote.created_at;
-        
-        // IMPORTANT: We switch contentId to be the VOTE's ID, not the ISSUE's ID
-        // The client might have sent the Issue ID, but we record the Vote ID.
-        // But we need to return this ID so client knows? Or just internal logic.
-        // Let's fetch the vote.id and use that.
-        // Re-assigning contentId local var (shadowing or mutating not ideal, but for logic flow):
-        // actually we can't mutate const contentId from destructuring.
-        // We will use a new variable for the record ID.
-        var actualContentId = vote.id; // Assuming id exists. 
+        // Use the vote row's own ID as the blockchain content key (avoids collision with issue ID)
+        targetContentId = vote.id;
+
     } else if (contentType === "comment_vote") {
-        // contentId passed from client is the commentId
-        const commentId = contentId;
-        
+        // Client passes commentId as contentId for comment votes
         const { data: vote, error } = await supabase
             .from("comment_votes")
             .select("*")
-            .eq("comment_id", commentId)
+            .eq("comment_id", contentId)
             .eq("user_id", user.id)
             .single();
 
@@ -171,13 +138,11 @@ export async function POST(request: NextRequest) {
             vote.updated_at || vote.created_at
         );
         contentCreatedAt = vote.created_at;
-        
-        var actualContentId = vote.id;
+        targetContentId = vote.id;
+
     } else {
       return NextResponse.json({ error: "Invalid content type" }, { status: 400 });
     }
-
-    const targetContentId = (contentType === 'vote' || contentType === 'comment_vote') ? (actualContentId!) : contentId;
 
     // 4. Check if already recorded (SKIP for now to allow edits/re-recording, or check hash?)
     // If we want to prevent duplicate recording of the SAME state, we check if the LATEST record has the same hash.
@@ -237,29 +202,35 @@ export async function POST(request: NextRequest) {
         }, { status: 502 });
     }
 
-    // 7. Save record to DB
+    // 7. Save record to DB (includes user_id for direct audit traceability)
     const { error: dbError } = await supabase.from("blockchain_content_records").insert({
-        id: recordId, // Ensure DB record ID matches chain key
+        id: recordId,
         content_id: targetContentId,
         content_type: contentType,
         content_hash: result.contentHash,
         tx_hash: result.txHash,
         block_number: result.blockNumber,
+        user_id: user.id,
         status: 'verified'
     });
 
     if (dbError) {
         console.error("DB insert failed for content record:", dbError);
-        // Log audit
         await supabase.from("blockchain_audit_log").insert({
             user_id: user.id,
             action: "record_content_failed",
-            error_message: "DB insert failed: " + dbError.message,
-            metadata: { txHash: result.txHash }
+            error_message: `On-chain OK but DB insert failed: ${dbError.message}`,
+            metadata: { txHash: result.txHash, contentId: targetContentId, contentType }
         });
+
+        return NextResponse.json({
+            error: "Content recorded on-chain but database record failed",
+            txHash: result.txHash,
+            retryable: true,
+        }, { status: 500 });
     }
 
-    // 8. Log success
+    // 8. Log success (only when both on-chain and DB succeeded)
     await supabase.from("blockchain_audit_log").insert({
         user_id: user.id,
         action: "record_content",
