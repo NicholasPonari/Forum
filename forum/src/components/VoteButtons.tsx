@@ -72,7 +72,22 @@ export function VoteButtons({
 				contentId: issueId,
 				contentType: "vote",
 			}),
-		}).catch(err => console.error("Failed to record vote on chain:", err));
+		})
+			.then(async (res) => {
+				if (!res.ok) {
+					let payload: any = null;
+					try {
+						payload = await res.json();
+					} catch {
+						payload = null;
+					}
+					console.error("Failed to record vote on chain:", {
+						status: res.status,
+						payload,
+					});
+				}
+			})
+			.catch((err) => console.error("Failed to record vote on chain:", err));
 
 		// Refetch upvote/downvote counts and user vote
 		const [{ data: voteData }, { data: userVoteData }] = await Promise.all([

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabaseServer";
+import {
+  createServerSupabaseClient,
+  createServiceRoleSupabaseClient,
+} from "@/lib/supabaseServer";
 import { getBlockchainContentManager } from "@/lib/blockchain/content-manager";
 
 /**
@@ -20,6 +23,7 @@ import { getBlockchainContentManager } from "@/lib/blockchain/content-manager";
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
+    const serviceSupabase = await createServiceRoleSupabaseClient();
 
     // 1. Verify auth
     const {
@@ -189,7 +193,7 @@ export async function POST(request: NextRequest) {
         console.error("Blockchain record failed:", err);
         
         // Log failure
-        await supabase.from("blockchain_audit_log").insert({
+        await serviceSupabase.from("blockchain_audit_log").insert({
             user_id: user.id,
             action: "record_content_failed",
             error_message: err.message,
@@ -203,7 +207,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Save record to DB (includes user_id for direct audit traceability)
-    const { error: dbError } = await supabase.from("blockchain_content_records").insert({
+    const { error: dbError } = await serviceSupabase.from("blockchain_content_records").insert({
         id: recordId,
         content_id: targetContentId,
         content_type: contentType,
@@ -216,7 +220,7 @@ export async function POST(request: NextRequest) {
 
     if (dbError) {
         console.error("DB insert failed for content record:", dbError);
-        await supabase.from("blockchain_audit_log").insert({
+        await serviceSupabase.from("blockchain_audit_log").insert({
             user_id: user.id,
             action: "record_content_failed",
             error_message: `On-chain OK but DB insert failed: ${dbError.message}`,
@@ -231,7 +235,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 8. Log success (only when both on-chain and DB succeeded)
-    await supabase.from("blockchain_audit_log").insert({
+    await serviceSupabase.from("blockchain_audit_log").insert({
         user_id: user.id,
         action: "record_content",
         tx_hash: result.txHash,

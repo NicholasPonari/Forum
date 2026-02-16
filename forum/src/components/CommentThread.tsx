@@ -285,7 +285,24 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 					contentId: newComment.id,
 					contentType: "comment",
 				}),
-			}).catch(err => console.error("Failed to record comment on chain:", err));
+			})
+				.then(async (res) => {
+					if (!res.ok) {
+						let payload: any = null;
+						try {
+							payload = await res.json();
+						} catch {
+							payload = null;
+						}
+						console.error("Failed to record comment on chain:", {
+							status: res.status,
+							payload,
+						});
+					}
+				})
+				.catch((err) =>
+					console.error("Failed to record comment on chain:", err),
+				);
 
 			await createNotificationsForComment(
 				supabase,
@@ -386,7 +403,24 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 				contentId: commentId,
 				contentType: "comment_vote",
 			}),
-		}).catch((err) => console.error("Failed to record comment vote on chain:", err));
+		})
+			.then(async (res) => {
+				if (!res.ok) {
+					let payload: any = null;
+					try {
+						payload = await res.json();
+					} catch {
+						payload = null;
+					}
+					console.error("Failed to record comment vote on chain:", {
+						status: res.status,
+						payload,
+					});
+				}
+			})
+			.catch((err) =>
+				console.error("Failed to record comment vote on chain:", err),
+			);
 
 		// Optimistically update the local state
 		const updateCommentVote = (comments: Comment[]): Comment[] => {

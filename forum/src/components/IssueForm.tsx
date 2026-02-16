@@ -493,6 +493,17 @@ export function IssueForm({
 					contentId: issueData.id,
 					contentType: "issue",
 				}),
+			}).then(async (res) => {
+				if (!res.ok) {
+					let payload: any = null;
+					try {
+						payload = await res.json();
+					} catch {
+						payload = null;
+					}
+					throw new Error(payload?.error || payload?.details || `HTTP ${res.status}`);
+				}
+				return res;
 			});
 
 			toast.promise(blockchainPromise, {

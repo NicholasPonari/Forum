@@ -112,7 +112,22 @@ export function IssueEditForm({ issue, onSuccess }: IssueEditFormProps) {
 					contentId: issue.id.toString(), // Ensure string
 					contentType: "issue",
 				}),
-			}).catch((err) => console.error("Failed to record edit on chain:", err));
+			})
+				.then(async (res) => {
+					if (!res.ok) {
+						let payload: any = null;
+						try {
+							payload = await res.json();
+						} catch {
+							payload = null;
+						}
+						console.error("Failed to record edit on chain:", {
+							status: res.status,
+							payload,
+						});
+					}
+				})
+				.catch((err) => console.error("Failed to record edit on chain:", err));
 		} catch (e) {
 			console.error("Blockchain recording error:", e);
 		}
