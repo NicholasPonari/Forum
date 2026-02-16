@@ -14,11 +14,19 @@ export async function GET() {
 			);
 		}
 
-		const { count } = await supabase
+		const { count, error: countError } = await supabase
 			.from("notifications")
 			.select("id", { count: "exact", head: true })
 			.eq("user_id", user.id)
 			.eq("is_read", false);
+
+		if (countError) {
+			console.error("Unread count query error:", countError);
+			return NextResponse.json(
+				{ error: "Failed to fetch unread count" },
+				{ status: 500 }
+			);
+		}
 
 		return NextResponse.json({ count: count || 0 });
 	} catch (error) {

@@ -39,8 +39,8 @@ export function NotificationBell() {
 			try {
 				const { count, error } = await supabase
 					.from("notifications")
-					.select("*", { count: "exact", head: true })
-					.eq("read", false)
+					.select("id", { count: "exact", head: true })
+					.eq("is_read", false)
 					.eq("user_id", user.id);
 
 				if (error) {
@@ -82,8 +82,8 @@ export function NotificationBell() {
 				try {
 					const { count, error } = await supabase
 						.from("notifications")
-						.select("*", { count: "exact", head: true })
-						.eq("read", false)
+						.select("id", { count: "exact", head: true })
+						.eq("is_read", false)
 						.eq("user_id", user.id);
 
 					if (error) {
