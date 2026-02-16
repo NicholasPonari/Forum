@@ -3,7 +3,10 @@ import {
   createServerSupabaseClient,
   createServiceRoleSupabaseClient,
 } from "@/lib/supabaseServer";
-import { getBlockchainContentManager } from "@/lib/blockchain/content-manager";
+import {
+  getBlockchainContentManager,
+  type ContentType,
+} from "@/lib/blockchain/content-manager";
 import { getBlockchainIdentityManager } from "@/lib/blockchain/identity-manager";
 
 /**
@@ -24,7 +27,22 @@ import { getBlockchainIdentityManager } from "@/lib/blockchain/identity-manager"
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
-    const serviceSupabase = await createServiceRoleSupabaseClient();
+    let serviceSupabase;
+    try {
+      serviceSupabase = await createServiceRoleSupabaseClient();
+    } catch (serviceInitError: any) {
+      console.error("record-content service client init failed:", serviceInitError);
+      return NextResponse.json(
+        {
+          error: "Blockchain service misconfigured",
+          details:
+            serviceInitError?.message ||
+            "SUPABASE_SERVICE_ROLE_KEY is missing or invalid",
+          retryable: false,
+        },
+        { status: 500 },
+      );
+    }
 
     // 1. Verify auth
     const {
@@ -39,8 +57,11 @@ export async function POST(request: NextRequest) {
     // 2. Parse body
     const body = await request.json();
     const { contentId, contentType } = body;
+    const normalizedContentId = String(contentId ?? "").trim();
+    const normalizedContentType =
+      typeof contentType === "string" ? contentType.trim() : "";
 
-    if (!contentId || !contentType) {
+    if (!normalizedContentId || !normalizedContentType) {
       return NextResponse.json(
         { error: "Missing required fields: contentId, contentType" },
         { status: 400 }
@@ -50,13 +71,13 @@ export async function POST(request: NextRequest) {
     // 3. Verify content ownership and fetch data for hashing
     let contentHash = "";
     let contentCreatedAt = "";
-    let targetContentId = contentId;
+    let targetContentId = normalizedContentId;
 
-    if (contentType === "issue") {
+    if (normalizedContentType === "issue") {
       const { data: issue, error } = await supabase
         .from("issues")
         .select("*")
-        .eq("id", contentId)
+        .eq("id", normalizedContentId)
         .single();
 
       if (error || !issue) {
@@ -77,11 +98,11 @@ export async function POST(request: NextRequest) {
       );
       contentCreatedAt = issue.created_at;
 
-    } else if (contentType === "comment") {
+    } else if (normalizedContentType === "comment") {
       const { data: comment, error } = await supabase
         .from("comments")
         .select("*")
-        .eq("id", contentId)
+        .eq("id", normalizedContentId)
         .single();
 
       if (error || !comment) {
@@ -100,12 +121,12 @@ export async function POST(request: NextRequest) {
       );
       contentCreatedAt = comment.created_at;
 
-    } else if (contentType === "vote") {
+    } else if (normalizedContentType === "vote") {
         // Client passes issueId as contentId for votes; we look up by (issue_id, user_id)
         const { data: vote, error } = await supabase
             .from("votes")
             .select("*")
-            .eq("issue_id", contentId)
+            .eq("issue_id", normalizedContentId)
             .eq("user_id", user.id)
             .single();
 
@@ -123,12 +144,12 @@ export async function POST(request: NextRequest) {
         // Use the vote row's own ID as the blockchain content key (avoids collision with issue ID)
         targetContentId = vote.id;
 
-    } else if (contentType === "comment_vote") {
+    } else if (normalizedContentType === "comment_vote") {
         // Client passes commentId as contentId for comment votes
         const { data: vote, error } = await supabase
             .from("comment_votes")
             .select("*")
-            .eq("comment_id", contentId)
+            .eq("comment_id", normalizedContentId)
             .eq("user_id", user.id)
             .single();
 
@@ -251,7 +272,11 @@ export async function POST(request: NextRequest) {
                     identity_hash: identityResult.identityHash,
                     tx_hash: identityResult.txHash,
                     error_message: `Auto-bootstrap identity DB insert failed: ${identityInsertError.message}`,
-                    metadata: { isAutoBootstrap: true, contentType, contentId: targetContentId },
+                    metadata: {
+                        isAutoBootstrap: true,
+                        contentType: normalizedContentType,
+                        contentId: targetContentId,
+                    },
                 });
 
                 return NextResponse.json(
@@ -282,7 +307,11 @@ export async function POST(request: NextRequest) {
                 user_id: user.id,
                 action: "issue_failed",
                 error_message: `Auto-bootstrap identity failed: ${bootstrapError?.message || "Unknown error"}`,
-                metadata: { isAutoBootstrap: true, contentType, contentId: targetContentId },
+                metadata: {
+                    isAutoBootstrap: true,
+                    contentType: normalizedContentType,
+                    contentId: targetContentId,
+                },
             });
 
             return NextResponse.json(
@@ -313,7 +342,7 @@ export async function POST(request: NextRequest) {
             recordId, // Use the unique Record ID as the key on-chain
             contentHash,
             identityHash,
-            contentType
+            normalizedContentType as ContentType
         );
     } catch (err: any) {
         console.error("Blockchain record failed:", err);
@@ -323,7 +352,10 @@ export async function POST(request: NextRequest) {
             user_id: user.id,
             action: "record_content_failed",
             error_message: err.message,
-            metadata: { contentId: targetContentId, contentType }
+            metadata: {
+              contentId: targetContentId,
+              contentType: normalizedContentType,
+            }
         });
 
         return NextResponse.json({ 
@@ -336,7 +368,7 @@ export async function POST(request: NextRequest) {
     const { error: dbError } = await serviceSupabase.from("blockchain_content_records").insert({
         id: recordId,
         content_id: targetContentId,
-        content_type: contentType,
+        content_type: normalizedContentType,
         content_hash: result.contentHash,
         tx_hash: result.txHash,
         block_number: result.blockNumber,
@@ -350,7 +382,11 @@ export async function POST(request: NextRequest) {
             user_id: user.id,
             action: "record_content_failed",
             error_message: `On-chain OK but DB insert failed: ${dbError.message}`,
-            metadata: { txHash: result.txHash, contentId: targetContentId, contentType }
+            metadata: {
+              txHash: result.txHash,
+              contentId: targetContentId,
+              contentType: normalizedContentType,
+            }
         });
 
         return NextResponse.json({
@@ -367,7 +403,7 @@ export async function POST(request: NextRequest) {
         tx_hash: result.txHash,
         metadata: { 
             contentId: targetContentId, 
-            contentType, 
+            contentType: normalizedContentType, 
             blockNumber: result.blockNumber 
         }
     });
@@ -381,6 +417,21 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error("Unexpected error in record-content:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    const details = error instanceof Error ? error.message : String(error);
+    const isConfigError =
+      details.includes("SUPABASE_SERVICE_ROLE_KEY") ||
+      details.includes("contentContractAddress") ||
+      details.includes("private key") ||
+      details.includes("invalid address") ||
+      details.includes("missing");
+
+    return NextResponse.json(
+      {
+        error: isConfigError ? "Blockchain service misconfigured" : "Internal Server Error",
+        details,
+        retryable: !isConfigError,
+      },
+      { status: 500 },
+    );
   }
 }
