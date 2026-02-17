@@ -393,11 +393,7 @@ const AboutPage = () => {
 									Co-Founder & CTO
 								</p>
 								<p className="text-slate-700 leading-relaxed">
-									Nicholas is a technologist and investor focused on responsible
-									systems: privacy, security, and durable architecture. He brings
-									engineering discipline to Vox.Vote’s verification and integrity
-									design—ensuring the platform isn’t just inspiring, but
-									operationally sound.
+									Nicholas Ponari is a technologist, civic candidate, and technical product leader focused on building systems that improve public outcomes in the real world. He has run for office twice in Canada (provincially and federally) and has led cross-disciplinary teams of academics developing cutting-edge AI assistants in healthcare. Nicholas is also an active startup investor, including Mysa—one of Canada’s leading platforms for home energy optimization and emissions reduction—and Arcadia, which is building athletic gaming experiences that counter sedentary lifestyles and strengthen community health. At Vox.Vote, he brings security-minded engineering, product rigor, and a public-service perspective to build trusted civic infrastructure that scales.
 								</p>
 							</div>
 						</div>
