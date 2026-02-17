@@ -92,12 +92,12 @@ export function CommunityMap() {
 	useEffect(() => {
 		async function fetchMembers() {
 			try {
-				const res = await fetch("/api/community-members");
+				const res = await fetch("/api/verified-members");
 				const data = await res.json();
 				setMembers(data.members || []);
 				setTotal(data.total || 0);
 			} catch (err) {
-				console.error("Failed to fetch community members:", err);
+				console.error("Failed to fetch verified members:", err);
 			} finally {
 				setLoading(false);
 			}

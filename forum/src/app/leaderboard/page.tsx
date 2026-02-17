@@ -127,7 +127,7 @@ export default function LeaderboardPage() {
 							Community Leaderboard
 						</h1>
 						<p className="text-lg text-gray-600">
-							Top 20 most active community members
+							Top 20 most active verified residents
 						</p>
 					</div>
 

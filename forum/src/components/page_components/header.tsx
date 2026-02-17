@@ -139,7 +139,7 @@ const Header: React.FC<HeaderProps> = ({
 
 						<Link href="/signup">
 							<Button variant="outline" className="rounded-lg">
-								Sign up for free
+								Sign up
 							</Button>
 						</Link>
 

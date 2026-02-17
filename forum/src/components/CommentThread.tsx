@@ -48,7 +48,6 @@ interface CommentThreadProps {
 	user_id?: string;
 }
 
-const MEMBER_MONTHLY_COMMENT_LIMIT = 5;
 
 export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 	const { isMember } = useAuth();
@@ -76,26 +75,10 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 	const [showSignupDialog, setShowSignupDialog] = useState(false);
 	const router = useRouter();
 
-	// Fetch member's comment count for current month
+	// Fetch member's comment count for current month (deprecated - no longer needed)
 	const fetchMemberCommentCount = useCallback(async () => {
-		if (!user_id || !isMember) return;
-
-		const supabase = createClient();
-		const now = new Date();
-		const startOfMonth = new Date(
-			now.getFullYear(),
-			now.getMonth(),
-			1
-		).toISOString();
-
-		const { count } = await supabase
-			.from("comments")
-			.select("id", { count: "exact", head: true })
-			.eq("user_id", user_id)
-			.gte("created_at", startOfMonth);
-
-		setMemberCommentCount(count || 0);
-	}, [user_id, isMember]);
+		// No-op - all users are now verified
+	}, []);
 
 	useEffect(() => {
 		fetchComments();
@@ -235,11 +218,7 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 	const submitReply = async (parentId: string | null) => {
 		if (!replyContent.trim()) return;
 
-		// Check member comment limit
-		if (isMember && memberCommentCount >= MEMBER_MONTHLY_COMMENT_LIMIT) {
-			setShowMemberLimitDialog(true);
-			return;
-		}
+	// No comment limit checks needed - all users are verified
 
 		setSubmitting(true);
 		const supabase = createClient();
@@ -344,21 +323,14 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 		setSubmitting(false);
 		fetchComments();
 
-		// Update member comment count after posting
-		if (isMember) {
-			setMemberCommentCount((prev) => prev + 1);
-		}
+		// No member comment count tracking needed
 	};
 
 	// Handle voting with optimistic UI updates
 	const handleVote = async (commentId: string, value: number) => {
 		if (!user_id) return;
 
-		// Block members from voting on comments
-		if (isMember) {
-			setShowMemberLimitDialog(true);
-			return;
-		}
+		// All users can vote on comments
 
 		const supabase = createClient();
 		const {
@@ -594,41 +566,17 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 							{!showMainComposer ? (
 								<div className="space-y-2">
 									<Input
-										placeholder={
-											isMember &&
-											memberCommentCount >= MEMBER_MONTHLY_COMMENT_LIMIT
-												? "Comment limit reached this month"
-												: "Add your reply"
-										}
+										placeholder={"Add your reply"}
 										readOnly
 										onClick={() => {
 											if (!user_id) {
 												setShowSignupDialog(true);
 												return;
 											}
-											if (
-												isMember &&
-												memberCommentCount >= MEMBER_MONTHLY_COMMENT_LIMIT
-											) {
-												setShowMemberLimitDialog(true);
-												return;
-											}
 											setShowMainComposer(true);
 										}}
-										className={`h-12 rounded-full cursor-text bg-white ${
-											isMember &&
-											memberCommentCount >= MEMBER_MONTHLY_COMMENT_LIMIT
-												? "opacity-60"
-												: ""
-										}`}
+										className="h-12 rounded-full cursor-text bg-white"
 									/>
-									{isMember && (
-										<p className="text-xs text-amber-600 flex items-center gap-1">
-											<AlertCircle className="w-3 h-3" />
-											{MEMBER_MONTHLY_COMMENT_LIMIT - memberCommentCount}{" "}
-											comments remaining this month
-										</p>
-									)}
 								</div>
 							) : (
 								<div className="rounded-2xl border bg-white overflow-hidden">
@@ -763,9 +711,8 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 					<DialogHeader>
 						<DialogTitle>Join Vox.Vote</DialogTitle>
 						<DialogDescription>
-							To vote or reply to comments, please create an account. You can
-							sign up as a community member or become a verified resident for
-							full access.
+							To vote or reply to comments, please create a verified account.
+							All accounts require identity verification.
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>
@@ -789,21 +736,14 @@ export function CommentThread({ issueId, user_id }: CommentThreadProps) {
 					<DialogHeader>
 						<DialogTitle className="flex items-center gap-2">
 							<AlertCircle className="w-5 h-5 text-amber-500" />
-							Member Restriction
+							Verification Required
 						</DialogTitle>
 						<DialogDescription className="space-y-2">
 							<p>
-								As a community member, you have limited access to some features:
+								To participate in discussions, you need a verified account.
 							</p>
-							<ul className="list-disc list-inside text-sm space-y-1 text-muted-foreground">
-								<li>
-									5 comments per month (you&apos;ve used {memberCommentCount})
-								</li>
-								<li>Cannot vote on posts or comments</li>
-								<li>Cannot create new issues</li>
-							</ul>
 							<p className="pt-2">
-								Become a verified resident to unlock all features!
+								Please sign up for identity verification to unlock all features!
 							</p>
 						</DialogDescription>
 					</DialogHeader>

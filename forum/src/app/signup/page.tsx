@@ -5,16 +5,12 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
 	ArrowLeft,
-	User,
 	BadgeCheck,
 	Building2,
 	Vote,
 	MessageSquare,
 	FileText,
 	Users,
-	ThumbsUp,
-	PenLine,
-	AlertCircle,
 } from "lucide-react";
 
 export default function SignUpPage() {
@@ -52,61 +48,11 @@ export default function SignUpPage() {
 						</h1>
 						<p className="text-lg text-gray-600 max-w-2xl mx-auto">
 							Choose how you&apos;d like to participate in your community.
-							Different account types have different permissions.
+							All accounts require identity verification.
 						</p>
 					</div>
 
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-						{/* Unverified User */}
-						<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
-							<div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4 mx-auto">
-								<User className="w-8 h-8 text-gray-600" />
-							</div>
-							<h2 className="text-xl font-bold text-center mb-2">
-								Community Member
-							</h2>
-							<p className="text-sm text-gray-600 text-center mb-4">
-								Quick signup to browse and participate in discussions
-							</p>
-							<div className="flex-1">
-								<ul className="space-y-2 text-sm text-gray-600 mb-4">
-									<li className="flex items-center gap-2">
-										<MessageSquare className="w-4 h-4 text-gray-400" />
-										<span>5 comments per month</span>
-									</li>
-									<li className="flex items-center gap-2">
-										<Users className="w-4 h-4 text-gray-400" />
-										<span>Browse community discussions</span>
-									</li>
-								</ul>
-								<div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-									<p className="text-xs font-medium text-amber-800 flex items-center gap-1 mb-2">
-										<AlertCircle className="w-3 h-3" />
-										Limitations
-									</p>
-									<ul className="space-y-1 text-xs text-amber-700">
-										<li className="flex items-center gap-2">
-											<PenLine className="w-3 h-3" />
-											<span className="line-through">Cannot post issues</span>
-										</li>
-										<li className="flex items-center gap-2">
-											<ThumbsUp className="w-3 h-3" />
-											<span className="line-through">Cannot vote on posts</span>
-										</li>
-										<li className="flex items-center gap-2">
-											<Vote className="w-3 h-3" />
-											<span className="line-through">Cannot access polls</span>
-										</li>
-									</ul>
-								</div>
-							</div>
-							<Link href="/signup/basic" className="w-full">
-								<Button variant="outline" className="w-full">
-									Sign Up Free
-								</Button>
-							</Link>
-						</div>
-
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 						{/* Verified Resident */}
 						<div className="bg-white rounded-xl shadow-lg border-2 border-primary p-6 flex flex-col relative">
 							<div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-xs font-semibold px-3 py-1 rounded-full">

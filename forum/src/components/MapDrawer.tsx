@@ -505,12 +505,12 @@ export function MapDrawer({
 
 		async function fetchCommunityMembers() {
 			try {
-				const res = await fetch("/api/community-members");
+				const res = await fetch("/api/verified-members");
 				const data = await res.json();
 				if (!isMounted) return;
 				setCommunityMembers(data.members || []);
 			} catch (err) {
-				console.error("Failed to fetch community members:", err);
+				console.error("Failed to fetch verified members:", err);
 			} finally {
 				if (isMounted) {
 					setCommunityLoading(false);
@@ -742,7 +742,7 @@ export function MapDrawer({
 								);
 							})}
 
-						{/* Community Members */}
+						{/* Verified Members */}
 						{communityVisibility && communityMembers.length > 0 && (
 							<CommunityClusterLayer members={communityMembers} />
 						)}
@@ -751,7 +751,7 @@ export function MapDrawer({
 					{communityVisibility && communityLoading && (
 						<div className="absolute inset-0 pointer-events-none flex items-start justify-center mt-6">
 							<div className="bg-white/90 px-3 py-1.5 rounded-full text-xs text-muted-foreground shadow">
-								Loading community members…
+								Loading verified members…
 							</div>
 						</div>
 					)}
@@ -821,7 +821,7 @@ export function MapDrawer({
 									:	<EyeOff className="w-3 h-3 text-gray-400" />}
 								</button>
 
-								{/* Community Members */}
+								{/* Verified Members */}
 								<button
 									onClick={() => toggleLayer("community")}
 									className={`flex items-center gap-2 w-full text-left p-1.5 rounded hover:bg-gray-50 transition-colors ${
@@ -835,7 +835,7 @@ export function MapDrawer({
 											backgroundColor: "#11182720",
 										}}
 									/>
-									<span className="text-xs flex-1">Community Members</span>
+									<span className="text-xs flex-1">Verified Members</span>
 									{communityVisibility ?
 										<Eye className="w-3 h-3 text-gray-400" />
 									:	<EyeOff className="w-3 h-3 text-gray-400" />}

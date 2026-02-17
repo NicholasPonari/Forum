@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
-// Use service role to read all profiles, but only return jittered coords
+// Use service role to read all verified profiles, but only return jittered coords
 const supabaseAdmin = createClient(
 	process.env.NEXT_PUBLIC_SUPABASE_URL!,
 	process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -25,10 +25,11 @@ export async function GET() {
 		const { data, error } = await supabaseAdmin
 			.from("profiles")
 			.select("coord")
-			.not("coord", "is", null);
+			.not("coord", "is", null)
+			.eq("verified", true);
 
 		if (error) {
-			console.error("Error fetching community members:", error);
+			console.error("Error fetching verified members:", error);
 			return NextResponse.json({ members: [] }, { status: 500 });
 		}
 
@@ -58,7 +59,7 @@ export async function GET() {
 			}
 		);
 	} catch (err) {
-		console.error("Community members API error:", err);
+		console.error("Verified members API error:", err);
 		return NextResponse.json({ members: [] }, { status: 500 });
 	}
 }

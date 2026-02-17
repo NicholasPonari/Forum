@@ -84,8 +84,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { message: String(error) };
   };
 
-  // Check if user is a "Member" type (has restrictions)
-  const isMember = profile?.type?.toLowerCase() === "member";
+  // All users are now verified - no member type restrictions
+  const isMember = false;
 
   const fetchProfile = async (
     userId: string,
