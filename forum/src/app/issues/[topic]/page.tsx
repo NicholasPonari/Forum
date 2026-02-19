@@ -60,7 +60,7 @@ export default function TopicPage({ params }: TopicPageProps) {
 			const fadeEnd = 100;
 			const progress = Math.min(
 				Math.max((scrollY - fadeStart) / (fadeEnd - fadeStart), 0),
-				1
+				1,
 			);
 			setScrollProgress(progress);
 		};
@@ -79,7 +79,7 @@ export default function TopicPage({ params }: TopicPageProps) {
 		let query = supabase
 			.from("issues")
 			.select(
-				`id, title, type, narrative, image_url, created_at, user_id, profiles (username, type, avatar_url, municipal_districts!profiles_municipal_district_id_fkey (city), provincial_districts!profiles_provincial_district_id_fkey (province)), votes (issue_id, value), location_lat, location_lng, address, video_url, media_type, federal_district, municipal_district, provincial_district, topic, government_level, province, city`
+				`id, title, type, narrative, image_url, created_at, user_id, profiles (username, type, avatar_url, municipal_districts!profiles_municipal_district_id_fkey (city), provincial_districts!profiles_provincial_district_id_fkey (province)), votes (issue_id, value), location_lat, location_lng, address, video_url, external_video_url, media_type, federal_district, municipal_district, provincial_district, topic, government_level, province, city`,
 			)
 			.eq("topic", topic)
 			.order("created_at", { ascending: false });
@@ -107,7 +107,7 @@ export default function TopicPage({ params }: TopicPageProps) {
 				query = query.or(
 					`provincial_district.in.(${districtNames
 						.map((n) => `"${n.replaceAll('"', '\\"')}"`)
-						.join(",")}),province.eq.${province}`
+						.join(",")}),province.eq.${province}`,
 				);
 			} else {
 				query = query.eq("province", province);
@@ -132,7 +132,7 @@ export default function TopicPage({ params }: TopicPageProps) {
 				query = query.or(
 					`municipal_district.in.(${districtNames
 						.map((n) => `"${n.replaceAll('"', '\\"')}"`)
-						.join(",")}),city.eq.${city}`
+						.join(",")}),city.eq.${city}`,
 				);
 			} else {
 				query = query.eq("city", city);
@@ -142,15 +142,16 @@ export default function TopicPage({ params }: TopicPageProps) {
 		const { data: issuesData } = await query;
 
 		const issuesWithUsernames = (issuesData || []).map((issue) => {
-			const profile = Array.isArray(issue.profiles)
-				? issue.profiles[0]
-				: issue.profiles;
-			const municipalDistrict = Array.isArray(profile?.municipal_districts)
-				? profile.municipal_districts[0]
-				: profile?.municipal_districts;
-			const provincialDistrict = Array.isArray(profile?.provincial_districts)
-				? profile.provincial_districts[0]
-				: profile?.provincial_districts;
+			const profile =
+				Array.isArray(issue.profiles) ? issue.profiles[0] : issue.profiles;
+			const municipalDistrict =
+				Array.isArray(profile?.municipal_districts) ?
+					profile.municipal_districts[0]
+				:	profile?.municipal_districts;
+			const provincialDistrict =
+				Array.isArray(profile?.provincial_districts) ?
+					profile.provincial_districts[0]
+				:	profile?.provincial_districts;
 			return {
 				...issue,
 				username: profile?.username || null,
@@ -276,7 +277,7 @@ export default function TopicPage({ params }: TopicPageProps) {
 							<div
 								className={cn(
 									"flex items-center justify-center w-10 h-10 rounded-lg",
-									topicConfig.color
+									topicConfig.color,
 								)}
 							>
 								<TopicIcon className="w-5 h-5" />
@@ -291,9 +292,9 @@ export default function TopicPage({ params }: TopicPageProps) {
 											<MapPin className="w-3.5 h-3.5" />
 											{city ||
 												province ||
-												(selectedLevel !== "all"
-													? LEVEL_LABELS[selectedLevel]
-													: "")}
+												(selectedLevel !== "all" ?
+													LEVEL_LABELS[selectedLevel]
+												:	"")}
 										</span>
 									)}
 								</div>
@@ -314,14 +315,14 @@ export default function TopicPage({ params }: TopicPageProps) {
 					</div>
 
 					{/* Feed */}
-					{issues.length === 0 ? (
+					{issues.length === 0 ?
 						<div className="text-center py-12 bg-white rounded-xl border">
 							<TopicIcon className="w-12 h-12 mx-auto text-gray-300 mb-3" />
 							<p className="text-gray-500 mb-2">
 								No {topicConfig.label.toLowerCase()} posts
-								{selectedLevel !== "all"
-									? ` at the ${selectedLevel} level`
-									: ""}{" "}
+								{selectedLevel !== "all" ?
+									` at the ${selectedLevel} level`
+								:	""}{" "}
 								yet.
 							</p>
 							<p className="text-sm text-gray-400 mb-4">
@@ -332,14 +333,13 @@ export default function TopicPage({ params }: TopicPageProps) {
 								Browse all posts
 							</Link>
 						</div>
-					) : (
-						<DistrictFeed
+					:	<DistrictFeed
 							issues={issues}
 							votes={votes}
 							voteBreakdown={voteBreakdown}
 							commentsCount={commentsCount}
 						/>
-					)}
+					}
 				</main>
 			</div>
 			<Footer />

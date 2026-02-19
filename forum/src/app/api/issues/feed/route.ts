@@ -15,7 +15,7 @@ export async function GET(request: Request) {
 		const { data: issues, error } = await supabase
 			.from("issues")
 			.select(
-				`id, title, type, narrative, image_url, created_at, user_id, profiles (username, type, avatar_url, municipal_districts!profiles_municipal_district_id_fkey (city), provincial_districts!profiles_provincial_district_id_fkey (province)), location_lat, location_lng, address, video_url, media_type, federal_district, municipal_district, provincial_district, topic, government_level`,
+				`id, title, type, narrative, image_url, created_at, user_id, profiles (username, type, avatar_url, municipal_districts!profiles_municipal_district_id_fkey (city), provincial_districts!profiles_provincial_district_id_fkey (province)), location_lat, location_lng, address, video_url, external_video_url, media_type, federal_district, municipal_district, provincial_district, topic, government_level`,
 			)
 			.order("created_at", { ascending: false })
 			.limit(limit);

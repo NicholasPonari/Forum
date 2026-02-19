@@ -40,7 +40,7 @@ export default function IssuesPage() {
 			const fadeEnd = 100;
 			const progress = Math.min(
 				Math.max((scrollY - fadeStart) / (fadeEnd - fadeStart), 0),
-				1
+				1,
 			);
 			setScrollProgress(progress);
 		};
@@ -57,22 +57,23 @@ export default function IssuesPage() {
 		const { data: issuesData } = await supabase
 			.from("issues")
 			.select(
-				`id, title, type, narrative, image_url, created_at, user_id, profiles (username, type, avatar_url, municipal_districts!profiles_municipal_district_id_fkey (city), provincial_districts!profiles_provincial_district_id_fkey (province)), votes (issue_id, value), location_lat, location_lng, address, video_url, media_type, federal_district, municipal_district, provincial_district, topic, government_level`
+				`id, title, type, narrative, image_url, created_at, user_id, profiles (username, type, avatar_url, municipal_districts!profiles_municipal_district_id_fkey (city), provincial_districts!profiles_provincial_district_id_fkey (province)), votes (issue_id, value), location_lat, location_lng, address, video_url, external_video_url, media_type, federal_district, municipal_district, provincial_district, topic, government_level`,
 			)
 			.not("topic", "is", null)
 			.order("created_at", { ascending: false })
 			.limit(20);
 
 		const issuesWithUsernames = (issuesData || []).map((issue) => {
-			const profile = Array.isArray(issue.profiles)
-				? issue.profiles[0]
-				: issue.profiles;
-			const municipalDistrict = Array.isArray(profile?.municipal_districts)
-				? profile.municipal_districts[0]
-				: profile?.municipal_districts;
-			const provincialDistrict = Array.isArray(profile?.provincial_districts)
-				? profile.provincial_districts[0]
-				: profile?.provincial_districts;
+			const profile =
+				Array.isArray(issue.profiles) ? issue.profiles[0] : issue.profiles;
+			const municipalDistrict =
+				Array.isArray(profile?.municipal_districts) ?
+					profile.municipal_districts[0]
+				:	profile?.municipal_districts;
+			const provincialDistrict =
+				Array.isArray(profile?.provincial_districts) ?
+					profile.provincial_districts[0]
+				:	profile?.provincial_districts;
 			return {
 				...issue,
 				username: profile?.username || null,
@@ -105,7 +106,7 @@ export default function IssuesPage() {
 		}
 
 		setTopicCounts(
-			TOPICS_LIST.map((t) => ({ topic: t.id, count: counts[t.id] || 0 }))
+			TOPICS_LIST.map((t) => ({ topic: t.id, count: counts[t.id] || 0 })),
 		);
 
 		// Calculate votes
@@ -224,13 +225,13 @@ export default function IssuesPage() {
 										href={`/issues/${topic.id}`}
 										className={cn(
 											"flex flex-col items-center p-4 rounded-lg border hover:shadow-md transition-all",
-											"hover:border-primary/30"
+											"hover:border-primary/30",
 										)}
 									>
 										<div
 											className={cn(
 												"w-10 h-10 rounded-full flex items-center justify-center mb-2",
-												topic.color
+												topic.color,
 											)}
 										>
 											<Icon className="w-5 h-5" />
@@ -257,7 +258,7 @@ export default function IssuesPage() {
 						</p>
 					</div>
 
-					{recentIssues.length === 0 ? (
+					{recentIssues.length === 0 ?
 						<div className="text-center py-12 bg-white rounded-xl border">
 							<Layers className="w-12 h-12 mx-auto text-gray-300 mb-3" />
 							<p className="text-gray-500 mb-2">No topical posts yet.</p>
@@ -268,14 +269,13 @@ export default function IssuesPage() {
 								Browse all posts
 							</Link>
 						</div>
-					) : (
-						<DistrictFeed
+					:	<DistrictFeed
 							issues={recentIssues}
 							votes={votes}
 							voteBreakdown={voteBreakdown}
 							commentsCount={commentsCount}
 						/>
-					)}
+					}
 				</main>
 			</div>
 			<Footer />

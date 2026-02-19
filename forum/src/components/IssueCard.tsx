@@ -26,6 +26,7 @@ import {
 } from "./ui/dialog";
 import { useTranslation } from "@/hooks/use-translation";
 import { BlockchainVerificationBadge } from "@/components/BlockchainVerificationBadge";
+import { getExternalVideoEmbedInfo } from "@/lib/externalVideo";
 
 export function IssueCard({
 	issue,
@@ -44,6 +45,9 @@ export function IssueCard({
 	const [isBookmarked, setIsBookmarked] = useState(false);
 	const [isBookmarking, setIsBookmarking] = useState(false);
 	const [showVerifyDialog, setShowVerifyDialog] = useState(false);
+	const externalVideoEmbed = getExternalVideoEmbedInfo(
+		issue.external_video_url,
+	);
 
 	useEffect(() => {
 		if (!user) {
@@ -92,7 +96,7 @@ export function IssueCard({
 				<div className="flex flex-col gap-3 mb-3">
 					{/* Top Row: User Info */}
 					<div className="flex items-center gap-3">
-						{issue.user_id ? (
+						{issue.user_id ?
 							<Link
 								href={`/profile/${issue.user_id}`}
 								onClick={(e) => e.stopPropagation()}
@@ -104,18 +108,17 @@ export function IssueCard({
 									</AvatarFallback>
 								</Avatar>
 							</Link>
-						) : (
-							<Avatar className="h-10 w-10">
+						:	<Avatar className="h-10 w-10">
 								<AvatarImage src={issue.avatar_url || ""} />
 								<AvatarFallback className="bg-gray-100">
 									<User className="w-5 h-5 text-gray-400" />
 								</AvatarFallback>
 							</Avatar>
-						)}
+						}
 
 						<div className="flex flex-col min-w-0">
 							<div className="flex items-center gap-2">
-								{issue.username ? (
+								{issue.username ?
 									<Link
 										href={`/profile/${issue.user_id}`}
 										onClick={(e) => e.stopPropagation()}
@@ -123,11 +126,10 @@ export function IssueCard({
 									>
 										{issue.username}
 									</Link>
-								) : (
-									<span className="font-semibold text-sm text-gray-900">
+								:	<span className="font-semibold text-sm text-gray-900">
 										{t.issueCard.anonymous}
 									</span>
-								)}
+								}
 								<span className="text-xs text-gray-400">•</span>
 								<span className="text-xs text-gray-500 whitespace-nowrap">
 									{formatTimeAgo(issue.created_at, t.time)}
@@ -157,11 +159,12 @@ export function IssueCard({
 									issue.government_level === "provincial" &&
 										"bg-purple-100 text-purple-700 hover:bg-purple-200",
 									issue.government_level === "federal" &&
-										"bg-blue-100 text-blue-700 hover:bg-blue-200"
+										"bg-blue-100 text-blue-700 hover:bg-blue-200",
 								)}
 							>
 								<Globe className="w-3 h-3 mr-1" />
-								{t.nav[issue.government_level] || getLevelLabel(issue.government_level)}
+								{t.nav[issue.government_level] ||
+									getLevelLabel(issue.government_level)}
 							</Badge>
 						)}
 
@@ -170,7 +173,8 @@ export function IssueCard({
 								variant="outline"
 								className="text-xs px-2 py-0.5 h-6 text-gray-600 bg-gray-50/50"
 							>
-								{t.topics[issue.topic as keyof typeof t.topics] || getTopicLabel(issue.topic)}
+								{t.topics[issue.topic as keyof typeof t.topics] ||
+									getTopicLabel(issue.topic)}
 							</Badge>
 						)}
 
@@ -189,7 +193,10 @@ export function IssueCard({
 								<div className="flex items-center gap-2 text-xs text-gray-600 flex-wrap">
 									{issue.municipal_district && (
 										<Link
-											href={getDistrictUrl("municipal", issue.municipal_district)}
+											href={getDistrictUrl(
+												"municipal",
+												issue.municipal_district,
+											)}
 											className="inline-flex items-center hover:text-primary hover:underline bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100"
 											onClick={(e) => e.stopPropagation()}
 										>
@@ -201,7 +208,7 @@ export function IssueCard({
 										<Link
 											href={getDistrictUrl(
 												"provincial",
-												issue.provincial_district
+												issue.provincial_district,
 											)}
 											className="inline-flex items-center hover:text-primary hover:underline bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100"
 											onClick={(e) => e.stopPropagation()}
@@ -236,58 +243,78 @@ export function IssueCard({
 					</p>
 				)}
 
-				{/* Image/Video thumbnail - Full width below content */}
-				{(issue.image_url || issue.video_url) && (
+				{/* Image/Video/External thumbnail - Full width below content */}
+				{(issue.image_url || issue.video_url || issue.external_video_url) && (
 					<div className="mb-3">
-						<div
-							className="w-full relative rounded-lg overflow-hidden cursor-pointer group"
-							style={{ maxHeight: "512px" }}
-							onClick={() => router.push(`/${issue.id}`)}
-						>
-							{issue.media_type === "video" && issue.video_url ? (
+						{issue.media_type === "external_video" && externalVideoEmbed ?
+							<div className="w-full rounded-lg overflow-hidden border bg-black/5">
 								<div
 									className="relative w-full"
 									style={{ aspectRatio: "16/9" }}
 								>
-									<Image
-										src={`https://image.mux.com/${
-											issue.video_url.split("/")[3].split(".")[0]
-										}/thumbnail.jpg?width=1200&height=675&fit_mode=crop`}
-										alt={issue.title}
-										fill
-										className="object-cover"
-										sizes="(max-width: 768px) 100vw, 800px"
-										priority={false}
+									<iframe
+										src={externalVideoEmbed.embedUrl}
+										title={issue.title}
+										className="absolute inset-0 h-full w-full"
+										loading="lazy"
+										referrerPolicy="strict-origin-when-cross-origin"
+										allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+										allowFullScreen
 									/>
-									{/* Video play icon overlay */}
-									<div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-										<div className="w-16 h-16 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
-											<svg
-												className="w-8 h-8 text-gray-800 ml-1"
-												fill="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path d="M8 5v14l11-7z" />
-											</svg>
+								</div>
+								<div className="px-3 py-2 text-[11px] text-muted-foreground">
+									Embedded from {externalVideoEmbed.provider}
+								</div>
+							</div>
+						:	<div
+								className="w-full relative rounded-lg overflow-hidden cursor-pointer group"
+								style={{ maxHeight: "512px" }}
+								onClick={() => router.push(`/${issue.id}`)}
+							>
+								{issue.media_type === "video" && issue.video_url ?
+									<div
+										className="relative w-full"
+										style={{ aspectRatio: "16/9" }}
+									>
+										<Image
+											src={`https://image.mux.com/${
+												issue.video_url.split("/")[3].split(".")[0]
+											}/thumbnail.jpg?width=1200&height=675&fit_mode=crop`}
+											alt={issue.title}
+											fill
+											className="object-cover"
+											sizes="(max-width: 768px) 100vw, 800px"
+											priority={false}
+										/>
+										<div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+											<div className="w-16 h-16 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
+												<svg
+													className="w-8 h-8 text-gray-800 ml-1"
+													fill="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path d="M8 5v14l11-7z" />
+												</svg>
+											</div>
 										</div>
 									</div>
-								</div>
-							) : issue.image_url ? (
-								<div
-									className="relative w-full"
-									style={{ aspectRatio: "16/9" }}
-								>
-									<Image
-										src={issue.image_url}
-										alt={issue.title}
-										fill
-										className="object-cover"
-										sizes="(max-width: 768px) 100vw, 800px"
-										priority={false}
-									/>
-								</div>
-							) : null}
-						</div>
+								: issue.image_url ?
+									<div
+										className="relative w-full"
+										style={{ aspectRatio: "16/9" }}
+									>
+										<Image
+											src={issue.image_url}
+											alt={issue.title}
+											fill
+											className="object-cover"
+											sizes="(max-width: 768px) 100vw, 800px"
+											priority={false}
+										/>
+									</div>
+								:	null}
+							</div>
+						}
 					</div>
 				)}
 
@@ -329,9 +356,7 @@ export function IssueCard({
 					<DialogContent>
 						<DialogHeader>
 							<DialogTitle>{t.issueCard.joinTitle}</DialogTitle>
-							<DialogDescription>
-								{t.issueCard.joinDesc}
-							</DialogDescription>
+							<DialogDescription>{t.issueCard.joinDesc}</DialogDescription>
 						</DialogHeader>
 						<DialogFooter>
 							<Button
@@ -340,7 +365,9 @@ export function IssueCard({
 							>
 								{t.issueCard.notNow}
 							</Button>
-							<Button onClick={() => router.push("/signup")}>{t.issueCard.signUp}</Button>
+							<Button onClick={() => router.push("/signup")}>
+								{t.issueCard.signUp}
+							</Button>
 						</DialogFooter>
 					</DialogContent>
 				</Dialog>

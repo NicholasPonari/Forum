@@ -24,11 +24,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { findDistricts } from "@/lib/utils/geolocation";
+import { getExternalVideoEmbedInfo } from "@/lib/externalVideo";
 import { cn } from "@/lib/utils";
 import { TOPIC_IDS, TOPICS } from "@/lib/topics";
 import {
 	MapPin,
 	Image as ImageIcon,
+	Link2,
 	Video as VideoIcon,
 	X,
 	Loader2,
@@ -60,9 +62,10 @@ const issueSchema = z
 			.nullable(),
 		title: z.string().min(3, "Title is required"),
 		narrative: z.string().min(3, "Narrative is required"),
-		mediaType: z.enum(["photo", "video"]).optional(),
+		mediaType: z.enum(["photo", "video", "external_video"]).optional(),
 		image: z.any().optional(),
 		video: z.any().optional(),
+		externalVideoUrl: z.string().trim().optional(),
 		location: z
 			.object({
 				lat: z.number(),
@@ -86,6 +89,15 @@ const issueSchema = z
 			) {
 				return false;
 			}
+			if (data.mediaType === "external_video") {
+				if (!data.externalVideoUrl) {
+					return false;
+				}
+
+				if (!getExternalVideoEmbedInfo(data.externalVideoUrl)) {
+					return false;
+				}
+			}
 			// Ensure only one media type is selected
 			if (data.mediaType === "photo" && data.video && data.video.length > 0) {
 				return false;
@@ -93,12 +105,20 @@ const issueSchema = z
 			if (data.mediaType === "video" && data.image && data.image.length > 0) {
 				return false;
 			}
+			if (
+				data.mediaType === "external_video" &&
+				((data.image && data.image.length > 0) ||
+					(data.video && data.video.length > 0))
+			) {
+				return false;
+			}
 			return true;
 		},
 		{
-			message: "Please select a media type and provide the corresponding file",
+			message:
+				"Please select a media type and provide the corresponding media (YouTube or Instagram URL for external video)",
 			path: ["mediaType"],
-		}
+		},
 	);
 
 type IssueFormValues = z.infer<typeof issueSchema>;
@@ -163,6 +183,8 @@ export function IssueForm({
 	const mediaType = watch("mediaType");
 	const image = watch("image");
 	const video = watch("video");
+	const externalVideoUrl = watch("externalVideoUrl");
+	const externalVideoPreview = getExternalVideoEmbedInfo(externalVideoUrl);
 
 	const [availableCities, setAvailableCities] = useState<string[]>([]);
 	const [loadingPlaceDefaults, setLoadingPlaceDefaults] = useState(false);
@@ -183,9 +205,9 @@ export function IssueForm({
 				if (!profile?.coord) return;
 
 				const coord =
-					typeof profile.coord === "string"
-						? JSON.parse(profile.coord)
-						: profile.coord;
+					typeof profile.coord === "string" ?
+						JSON.parse(profile.coord)
+					:	profile.coord;
 				if (!coord?.lat || !coord?.lng) return;
 
 				const [provincialResult, municipalResult] = await Promise.all([
@@ -258,7 +280,7 @@ export function IssueForm({
 				.limit(2000);
 
 			const uniqueCities = Array.from(
-				new Set((data || []).map((d) => d.city).filter(Boolean))
+				new Set((data || []).map((d) => d.city).filter(Boolean)),
 			).sort() as string[];
 			setAvailableCities(uniqueCities);
 		}
@@ -293,7 +315,7 @@ export function IssueForm({
 				const errorData = await response.json();
 				console.error("Upload URL creation failed:", errorData);
 				throw new Error(
-					"Failed to get upload URL: " + (errorData.error || "Unknown error")
+					"Failed to get upload URL: " + (errorData.error || "Unknown error"),
 				);
 			}
 
@@ -314,7 +336,7 @@ export function IssueForm({
 				console.error(
 					"File upload to Mux failed:",
 					uploadResponse.status,
-					uploadResponse.statusText
+					uploadResponse.statusText,
 				);
 				throw new Error("Failed to upload video to Mux");
 			}
@@ -348,7 +370,7 @@ export function IssueForm({
 				} else {
 					console.error(
 						"Failed to check upload status:",
-						statusResponse.status
+						statusResponse.status,
 					);
 				}
 				attempts++;
@@ -392,6 +414,7 @@ export function IssueForm({
 		const authorUserId = authenticatedUser.id;
 		let image_url = null;
 		let video_url = null;
+		let external_video_url = null;
 
 		// Handle image upload if present
 		if (
@@ -405,7 +428,7 @@ export function IssueForm({
 				file,
 				file instanceof File,
 				file.type,
-				file.size
+				file.size,
 			);
 			const filePath = `issues/${Date.now()}-${file.name}`;
 			const { error: uploadError } = await supabase.storage
@@ -433,7 +456,7 @@ export function IssueForm({
 				file,
 				file instanceof File,
 				file.type,
-				file.size
+				file.size,
 			);
 			try {
 				const playbackId = await uploadToMux(file);
@@ -444,6 +467,18 @@ export function IssueForm({
 				setSubmitting(false);
 				return;
 			}
+		}
+
+		if (values.mediaType === "external_video") {
+			const externalVideo = getExternalVideoEmbedInfo(values.externalVideoUrl);
+
+			if (!externalVideo) {
+				setError("Please enter a valid YouTube or Instagram post URL.");
+				setSubmitting(false);
+				return;
+			}
+
+			external_video_url = externalVideo.canonicalUrl;
 		}
 
 		const resolvedGovernmentLevel: "federal" | "provincial" | "municipal" =
@@ -459,7 +494,7 @@ export function IssueForm({
 		if (values.location && values.location.lat && values.location.lng) {
 			const districts = await findDistricts(
 				values.location.lat,
-				values.location.lng
+				values.location.lng,
 			);
 			municipalDistrict = districts.municipalDistrict;
 			provincialDistrict = districts.provincialDistrict;
@@ -475,6 +510,7 @@ export function IssueForm({
 				narrative: values.narrative,
 				image_url,
 				video_url,
+				external_video_url,
 				media_type: values.mediaType,
 				user_id: authorUserId,
 				location_lat: values.location?.lat || null,
@@ -485,13 +521,13 @@ export function IssueForm({
 				topic: topicSlug,
 				government_level: resolvedGovernmentLevel,
 				province:
-					values.location || resolvedGovernmentLevel !== "provincial"
-						? null
-						: values.province || null,
+					values.location || resolvedGovernmentLevel !== "provincial" ?
+						null
+					:	values.province || null,
 				city:
-					values.location || resolvedGovernmentLevel !== "municipal"
-						? null
-						: values.city || null,
+					values.location || resolvedGovernmentLevel !== "municipal" ?
+						null
+					:	values.city || null,
 			})
 			.select()
 			.single();
@@ -526,7 +562,9 @@ export function IssueForm({
 				const isMissingIdentity =
 					recordRes.status === 400 &&
 					(payload?.error === "User has no verified blockchain identity" ||
-						String(payload?.error || "").toLowerCase().includes("no verified blockchain identity"));
+						String(payload?.error || "")
+							.toLowerCase()
+							.includes("no verified blockchain identity"));
 
 				if (isMissingIdentity) {
 					const retryIdentityRes = await fetch("/api/blockchain/retry", {
@@ -575,7 +613,9 @@ export function IssueForm({
 					return retryRecordRes;
 				}
 
-				throw new Error(payload?.error || payload?.details || `HTTP ${recordRes.status}`);
+				throw new Error(
+					payload?.error || payload?.details || `HTTP ${recordRes.status}`,
+				);
 			};
 
 			// Don't block UI for too long, but we want to ensure it starts
@@ -612,13 +652,17 @@ export function IssueForm({
 		setIsMapOpen(!isMapOpen);
 	};
 
-	const handleMediaSelect = (type: "photo" | "video") => {
+	const handleMediaSelect = (type: "photo" | "video" | "external_video") => {
 		if (mediaType === type) {
 			// If clicking same type, do nothing or toggle off?
 			// Maybe just focus?
 		} else {
 			setValue("mediaType", type, { shouldValidate: true });
-			setValue(type === "photo" ? "video" : "image", undefined); // Clear other
+			setValue("image", undefined);
+			setValue("video", undefined);
+			if (type !== "external_video") {
+				setValue("externalVideoUrl", "", { shouldValidate: true });
+			}
 		}
 	};
 
@@ -721,17 +765,17 @@ export function IssueForm({
 									size="sm"
 									className={cn(
 										"flex-1 h-9 text-xs",
-										governmentLevel === value
-											? "bg-primary/10 text-primary border-primary/30"
-											: "text-muted-foreground"
+										governmentLevel === value ?
+											"bg-primary/10 text-primary border-primary/30"
+										:	"text-muted-foreground",
 									)}
 									onClick={() =>
 										setValue(
 											"governmentLevel",
-											governmentLevel === value
-												? null
-												: (value as "federal" | "provincial" | "municipal"),
-											{ shouldValidate: true }
+											governmentLevel === value ? null : (
+												(value as "federal" | "provincial" | "municipal")
+											),
+											{ shouldValidate: true },
 										)
 									}
 									disabled={submitting || !user || loading}
@@ -849,7 +893,7 @@ export function IssueForm({
 								onClick={toggleMap}
 								className={cn(
 									"h-8 text-xs",
-									location ? "text-primary" : "text-muted-foreground"
+									location ? "text-primary" : "text-muted-foreground",
 								)}
 							>
 								<MapPin className="mr-2 h-3.5 w-3.5" />
@@ -865,9 +909,9 @@ export function IssueForm({
 								onClick={() => handleMediaSelect("photo")}
 								className={cn(
 									"h-8 text-xs",
-									mediaType === "photo"
-										? "text-primary"
-										: "text-muted-foreground"
+									mediaType === "photo" ? "text-primary" : (
+										"text-muted-foreground"
+									),
 								)}
 							>
 								<ImageIcon className="mr-2 h-3.5 w-3.5" />
@@ -880,13 +924,28 @@ export function IssueForm({
 								onClick={() => handleMediaSelect("video")}
 								className={cn(
 									"h-8 text-xs",
-									mediaType === "video"
-										? "text-primary"
-										: "text-muted-foreground"
+									mediaType === "video" ? "text-primary" : (
+										"text-muted-foreground"
+									),
 								)}
 							>
 								<VideoIcon className="mr-2 h-3.5 w-3.5" />
 								Video
+							</Button>
+							<Button
+								type="button"
+								variant={mediaType === "external_video" ? "secondary" : "ghost"}
+								size="sm"
+								onClick={() => handleMediaSelect("external_video")}
+								className={cn(
+									"h-8 text-xs",
+									mediaType === "external_video" ? "text-primary" : (
+										"text-muted-foreground"
+									),
+								)}
+							>
+								<Link2 className="mr-2 h-3.5 w-3.5" />
+								Instagram/YouTube URL
 							</Button>
 						</div>
 
@@ -917,6 +976,52 @@ export function IssueForm({
 									>
 										<X className="h-3.5 w-3.5" />
 									</Button>
+								</div>
+							)}
+
+							{mediaType === "external_video" && (
+								<div className="p-3 border rounded-lg bg-muted/30 relative animate-in fade-in slide-in-from-top-2">
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										className="absolute top-2 right-2 h-5 w-5"
+										onClick={() => {
+											setValue("mediaType", undefined);
+											setValue("externalVideoUrl", "", {
+												shouldValidate: true,
+											});
+										}}
+									>
+										<X className="h-3 w-3" />
+									</Button>
+									<div className="space-y-2">
+										<Label className="text-xs font-medium flex items-center gap-2">
+											<Link2 className="h-3.5 w-3.5" />
+											Instagram / YouTube URL
+										</Label>
+										<Input
+											type="url"
+											placeholder="https://www.youtube.com/watch?v=... or https://www.instagram.com/reel/..."
+											{...register("externalVideoUrl")}
+											disabled={submitting || !user || loading}
+											className="bg-background h-8 text-xs"
+										/>
+										<p className="text-[10px] text-muted-foreground">
+											Supports YouTube (watch, shorts, youtu.be) and Instagram
+											(reel/post).
+										</p>
+										{externalVideoUrl && !externalVideoPreview && (
+											<p className="text-[10px] text-destructive">
+												Enter a valid YouTube or Instagram URL.
+											</p>
+										)}
+										{externalVideoPreview && (
+											<p className="text-[10px] text-muted-foreground">
+												Detected provider: {externalVideoPreview.provider}
+											</p>
+										)}
+									</div>
 								</div>
 							)}
 
@@ -956,7 +1061,10 @@ export function IssueForm({
 										variant="ghost"
 										size="icon"
 										className="absolute top-2 right-2 h-5 w-5"
-										onClick={() => setValue("mediaType", undefined)}
+										onClick={() => {
+											setValue("mediaType", undefined);
+											setValue("image", undefined);
+										}}
 									>
 										<X className="h-3 w-3" />
 									</Button>
@@ -987,7 +1095,10 @@ export function IssueForm({
 										variant="ghost"
 										size="icon"
 										className="absolute top-2 right-2 h-5 w-5"
-										onClick={() => setValue("mediaType", undefined)}
+										onClick={() => {
+											setValue("mediaType", undefined);
+											setValue("video", undefined);
+										}}
 									>
 										<X className="h-3 w-3" />
 									</Button>
@@ -1054,18 +1165,16 @@ export function IssueForm({
 						className="w-full"
 						disabled={submitting || !user || loading || isMember}
 					>
-						{submitting ? (
+						{submitting ?
 							<>
 								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 								Submitting...
 							</>
-						) : isMember ? (
+						: isMember ?
 							"Verify to Post"
-						) : user ? (
+						: user ?
 							"Submit Issue"
-						) : (
-							"Log in to submit"
-						)}
+						:	"Log in to submit"}
 					</Button>
 				</form>
 			</CardContent>

@@ -60,13 +60,14 @@ import {
 import { IssueEditForm } from "@/components/IssueEditForm";
 import { cn } from "@/lib/utils";
 import { BlockchainVerificationBadge } from "@/components/BlockchainVerificationBadge";
+import { getExternalVideoEmbedInfo } from "@/lib/externalVideo";
 
 async function fetchIssue(id: string): Promise<DetailedIssue | null> {
 	const supabase = createClient();
 	const { data, error } = await supabase
 		.from("issues")
 		.select(
-			`id, title, type, narrative, image_url, created_at, user_id, profiles (id, username, avatar_url), votes (issue_id, value), location_lat, location_lng, address, video_url, media_type, federal_district, municipal_district, provincial_district, topic, government_level`
+			`id, title, type, narrative, image_url, created_at, user_id, profiles (id, username, avatar_url), votes (issue_id, value), location_lat, location_lng, address, video_url, external_video_url, media_type, federal_district, municipal_district, provincial_district, topic, government_level`,
 		)
 		.eq("id", id)
 		.single();
@@ -321,9 +322,9 @@ function FakeDebatePage() {
 											<div
 												className={cn(
 													"px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap",
-													vote.result === "passed"
-														? "bg-green-100 text-green-800"
-														: "bg-red-100 text-red-800"
+													vote.result === "passed" ?
+														"bg-green-100 text-green-800"
+													:	"bg-red-100 text-red-800",
 												)}
 											>
 												{vote.result}
@@ -418,10 +419,10 @@ export default function IssuePage() {
 					setIssue(fetchedIssue);
 					// initialize vote breakdown
 					const ups = (fetchedIssue.votes || []).filter(
-						(v) => v.value === 1
+						(v) => v.value === 1,
 					).length;
 					const downs = (fetchedIssue.votes || []).filter(
-						(v) => v.value === -1
+						(v) => v.value === -1,
 					).length;
 					setUpvotes(ups);
 					setDownvotes(downs);
@@ -506,9 +507,11 @@ export default function IssuePage() {
 		return null;
 	}
 	// Fix: profiles is array due to Supabase join, extract first profile
-	const profile = Array.isArray(issue.profiles)
-		? issue.profiles[0]
-		: issue.profiles;
+	const profile =
+		Array.isArray(issue.profiles) ? issue.profiles[0] : issue.profiles;
+	const externalVideoEmbed = getExternalVideoEmbedInfo(
+		issue.external_video_url,
+	);
 
 	// Derived values
 	const netScore = upvotes - downvotes;
@@ -547,7 +550,7 @@ export default function IssuePage() {
 			.from("votes")
 			.upsert(
 				{ issue_id: issue.id, user_id: user.id, value },
-				{ onConflict: "user_id,issue_id" }
+				{ onConflict: "user_id,issue_id" },
 			);
 		if (error) {
 			toast("Could not submit vote.");
@@ -744,7 +747,29 @@ export default function IssuePage() {
 						)}
 
 						{/* Media - show after text, like Reddit inline media */}
-						{issue.media_type === "video" && issue.video_url ? (
+						{issue.media_type === "external_video" && externalVideoEmbed ?
+							<div className="w-full flex justify-center mt-4">
+								<div className="w-full max-w-[640px] rounded-xl overflow-hidden border bg-black/5">
+									<div
+										className="relative w-full"
+										style={{ aspectRatio: "16/9" }}
+									>
+										<iframe
+											src={externalVideoEmbed.embedUrl}
+											title={issue.title}
+											className="absolute inset-0 h-full w-full"
+											loading="lazy"
+											referrerPolicy="strict-origin-when-cross-origin"
+											allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+											allowFullScreen
+										/>
+									</div>
+									<div className="px-3 py-2 text-xs text-muted-foreground">
+										Embedded from {externalVideoEmbed.provider}
+									</div>
+								</div>
+							</div>
+						: issue.media_type === "video" && issue.video_url ?
 							<div className="w-full flex justify-center mt-4">
 								<VideoPlayer
 									src={issue.video_url}
@@ -757,7 +782,7 @@ export default function IssuePage() {
 									}/thumbnail.jpg?width=640&height=480&fit_mode=crop`}
 								/>
 							</div>
-						) : issue.image_url ? (
+						: issue.image_url ?
 							<div className="w-full flex justify-center mt-4">
 								<Image
 									width={640}
@@ -768,7 +793,7 @@ export default function IssuePage() {
 									style={{ maxWidth: 640 }}
 								/>
 							</div>
-						) : null}
+						:	null}
 
 						<IssueLocationMap
 							latitude={issue.location_lat}

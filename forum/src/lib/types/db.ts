@@ -8,6 +8,7 @@ export interface Issue {
     narrative: string;
     image_url?: string | null;
     video_url?: string | null;
+    external_video_url?: string | null;
     media_type?: string | null;
     created_at: string;
     user_id?: string;
@@ -35,6 +36,7 @@ export interface DetailedIssue {
     narrative: string;
     image_url?: string | null;
     video_url?: string | null;
+    external_video_url?: string | null;
     media_type?: string | null;
     created_at: string;
     user_id?: string;

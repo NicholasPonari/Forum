@@ -90,7 +90,7 @@ export default function LevelPage({ params }: LevelPageProps) {
 	useEffect(() => {
 		if (searchQuery) {
 			const match = PROVINCES.find(
-				(p) => p.name.toLowerCase() === searchQuery.toLowerCase()
+				(p) => p.name.toLowerCase() === searchQuery.toLowerCase(),
 			);
 			if (match) {
 				setSelectedProvince(match.code);
@@ -100,9 +100,10 @@ export default function LevelPage({ params }: LevelPageProps) {
 
 	// Validate level
 	const validLevels: GovernmentLevel[] = ["federal", "provincial", "municipal"];
-	const governmentLevel = validLevels.includes(level as GovernmentLevel)
-		? (level as GovernmentLevel)
-		: null;
+	const governmentLevel =
+		validLevels.includes(level as GovernmentLevel) ?
+			(level as GovernmentLevel)
+		:	null;
 
 	useEffect(() => {
 		const handleScroll = () => {
@@ -111,7 +112,7 @@ export default function LevelPage({ params }: LevelPageProps) {
 			const fadeEnd = 100;
 			const progress = Math.min(
 				Math.max((scrollY - fadeStart) / (fadeEnd - fadeStart), 0),
-				1
+				1,
 			);
 			setScrollProgress(progress);
 		};
@@ -173,7 +174,7 @@ export default function LevelPage({ params }: LevelPageProps) {
 		let issuesQuery = supabase
 			.from("issues")
 			.select(
-				`id, title, type, narrative, image_url, created_at, user_id, profiles (username, type, avatar_url, municipal_districts!profiles_municipal_district_id_fkey (city), provincial_districts!profiles_provincial_district_id_fkey (province)), votes (issue_id, value), location_lat, location_lng, address, video_url, media_type, federal_district, municipal_district, provincial_district, topic, government_level, province, city`
+				`id, title, type, narrative, image_url, created_at, user_id, profiles (username, type, avatar_url, municipal_districts!profiles_municipal_district_id_fkey (city), provincial_districts!profiles_provincial_district_id_fkey (province)), votes (issue_id, value), location_lat, location_lng, address, video_url, external_video_url, media_type, federal_district, municipal_district, provincial_district, topic, government_level, province, city`,
 			)
 			.eq("government_level", governmentLevel);
 
@@ -186,15 +187,16 @@ export default function LevelPage({ params }: LevelPageProps) {
 
 		// Attach username and user role to each issue
 		const issuesWithUsernames = (issuesData || []).map((issue) => {
-			const profile = Array.isArray(issue.profiles)
-				? issue.profiles[0]
-				: issue.profiles;
-			const municipalDistrict = Array.isArray(profile?.municipal_districts)
-				? profile.municipal_districts[0]
-				: profile?.municipal_districts;
-			const provincialDistrict = Array.isArray(profile?.provincial_districts)
-				? profile.provincial_districts[0]
-				: profile?.provincial_districts;
+			const profile =
+				Array.isArray(issue.profiles) ? issue.profiles[0] : issue.profiles;
+			const municipalDistrict =
+				Array.isArray(profile?.municipal_districts) ?
+					profile.municipal_districts[0]
+				:	profile?.municipal_districts;
+			const provincialDistrict =
+				Array.isArray(profile?.provincial_districts) ?
+					profile.provincial_districts[0]
+				:	profile?.provincial_districts;
 			return {
 				...issue,
 				username: profile?.username || null,
@@ -333,9 +335,9 @@ export default function LevelPage({ params }: LevelPageProps) {
 							</div>
 							<div>
 								<h1 className="text-2xl font-bold">
-									{searchQuery
-										? `${searchQuery} ${getLevelLabel(governmentLevel)} Issues`
-										: `All ${getLevelLabel(governmentLevel)} Issues`}
+									{searchQuery ?
+										`${searchQuery} ${getLevelLabel(governmentLevel)} Issues`
+									:	`All ${getLevelLabel(governmentLevel)} Issues`}
 								</h1>
 								<p className="text-sm text-gray-500">
 									{levelDescriptions[governmentLevel]} • {issues.length} post
@@ -412,7 +414,7 @@ export default function LevelPage({ params }: LevelPageProps) {
 					</div>
 
 					{/* Feed */}
-					{issues.length === 0 ? (
+					{issues.length === 0 ?
 						<div className="text-center py-12 bg-white rounded-xl border">
 							<Globe className="w-12 h-12 mx-auto text-gray-300 mb-3" />
 							<p className="text-gray-500 mb-2">
@@ -426,14 +428,13 @@ export default function LevelPage({ params }: LevelPageProps) {
 								Browse all posts
 							</Link>
 						</div>
-					) : (
-						<DistrictFeed
+					:	<DistrictFeed
 							issues={issues}
 							votes={votes}
 							voteBreakdown={voteBreakdown}
 							commentsCount={commentsCount}
 						/>
-					)}
+					}
 				</main>
 			</div>
 			<Footer />
