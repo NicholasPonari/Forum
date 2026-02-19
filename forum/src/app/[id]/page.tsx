@@ -755,12 +755,14 @@ export default function IssuePage() {
 						)}
 
 						{/* Media - show after text, like Reddit inline media */}
-						{issue.media_type === "external_video" && externalVideoEmbed ? (
+						{issue.media_type === "external_video" && externalVideoEmbed ?
 							<div className="w-full flex justify-center mt-6">
 								<div
 									className={cn(
 										"w-full rounded-xl overflow-hidden border bg-black/5 relative shadow-sm",
-										externalVideoEmbed.provider === "instagram" ? "max-w-[450px]" : "max-w-[800px]"
+										externalVideoEmbed.provider === "instagram" ?
+											"max-w-[450px]"
+										:	"max-w-[800px]",
 									)}
 								>
 									<div className={cn("relative w-full", getEmbedAspectRatio())}>
@@ -783,7 +785,7 @@ export default function IssuePage() {
 									</div>
 								</div>
 							</div>
-						) : issue.media_type === "video" && issue.video_url ? (
+						: issue.media_type === "video" && issue.video_url ?
 							<div className="w-full flex justify-center mt-4">
 								<VideoPlayer
 									src={issue.video_url}
@@ -796,7 +798,7 @@ export default function IssuePage() {
 									}/thumbnail.jpg?width=640&height=480&fit_mode=crop`}
 								/>
 							</div>
-						: issue.image_url ?
+						: issue.media_type === "image" && issue.image_url ?
 							<div className="w-full flex justify-center mt-4">
 								<Image
 									width={640}

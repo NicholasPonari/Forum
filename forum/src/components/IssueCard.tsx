@@ -104,7 +104,7 @@ export function IssueCard({
 				<div className="flex flex-col gap-3 mb-3">
 					{/* Top Row: User Info */}
 					<div className="flex items-center gap-3">
-						{issue.user_id ? (
+						{issue.user_id ?
 							<Link
 								href={`/profile/${issue.user_id}`}
 								onClick={(e) => e.stopPropagation()}
@@ -116,18 +116,17 @@ export function IssueCard({
 									</AvatarFallback>
 								</Avatar>
 							</Link>
-						) : (
-							<Avatar className="h-10 w-10">
+						:	<Avatar className="h-10 w-10">
 								<AvatarImage src={issue.avatar_url || ""} />
 								<AvatarFallback className="bg-gray-100">
 									<User className="w-5 h-5 text-gray-400" />
 								</AvatarFallback>
 							</Avatar>
-						)}
+						}
 
 						<div className="flex flex-col min-w-0">
 							<div className="flex items-center gap-2">
-								{issue.username ? (
+								{issue.username ?
 									<Link
 										href={`/profile/${issue.user_id}`}
 										onClick={(e) => e.stopPropagation()}
@@ -135,11 +134,10 @@ export function IssueCard({
 									>
 										{issue.username}
 									</Link>
-								) : (
-									<span className="font-semibold text-sm text-gray-900">
+								:	<span className="font-semibold text-sm text-gray-900">
 										{t.issueCard.anonymous}
 									</span>
-								)}
+								}
 								<span className="text-xs text-gray-400">•</span>
 								<span className="text-xs text-gray-500 whitespace-nowrap">
 									{formatTimeAgo(issue.created_at, t.time)}
@@ -256,12 +254,14 @@ export function IssueCard({
 				{/* Image/Video/External thumbnail - Full width below content */}
 				{(issue.image_url || issue.video_url || issue.external_video_url) && (
 					<div className="mb-3">
-						{issue.media_type === "external_video" && externalVideoEmbed ? (
+						{issue.media_type === "external_video" && externalVideoEmbed ?
 							<div className="w-full flex justify-center">
 								<div
 									className={cn(
 										"w-full rounded-lg overflow-hidden border bg-black/5 relative group",
-										externalVideoEmbed.provider === "instagram" ? "max-w-[400px]" : "max-w-full"
+										externalVideoEmbed.provider === "instagram" ?
+											"max-w-[400px]"
+										:	"max-w-full",
 									)}
 								>
 									<div className={cn("relative w-full", getEmbedAspectRatio())}>
@@ -279,18 +279,19 @@ export function IssueCard({
 										<span>Embedded from {externalVideoEmbed.provider}</span>
 										<div className="flex items-center gap-1.5">
 											<div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
-											<span className="font-medium uppercase tracking-wider">External Video</span>
+											<span className="font-medium uppercase tracking-wider">
+												External Video
+											</span>
 										</div>
 									</div>
 								</div>
 							</div>
-						) : (
-							<div
+						:	<div
 								className="w-full relative rounded-lg overflow-hidden cursor-pointer group"
 								style={{ maxHeight: "512px" }}
 								onClick={() => router.push(`/${issue.id}`)}
 							>
-								{issue.media_type === "video" && issue.video_url ? (
+								{issue.media_type === "video" && issue.video_url ?
 									<div
 										className="relative w-full"
 										style={{ aspectRatio: "16/9" }}
