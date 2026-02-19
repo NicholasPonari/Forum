@@ -513,6 +513,14 @@ export default function IssuePage() {
 		issue.external_video_url,
 	);
 
+	// Determine aspect ratio for external embeds
+	const getEmbedAspectRatio = () => {
+		if (externalVideoEmbed?.provider === "instagram") {
+			return "aspect-[4/5]";
+		}
+		return "aspect-video";
+	};
+
 	// Derived values
 	const netScore = upvotes - downvotes;
 	const totalVotes = upvotes + downvotes;
@@ -747,29 +755,35 @@ export default function IssuePage() {
 						)}
 
 						{/* Media - show after text, like Reddit inline media */}
-						{issue.media_type === "external_video" && externalVideoEmbed ?
-							<div className="w-full flex justify-center mt-4">
-								<div className="w-full max-w-[640px] rounded-xl overflow-hidden border bg-black/5">
-									<div
-										className="relative w-full"
-										style={{ aspectRatio: "16/9" }}
-									>
+						{issue.media_type === "external_video" && externalVideoEmbed ? (
+							<div className="w-full flex justify-center mt-6">
+								<div
+									className={cn(
+										"w-full rounded-xl overflow-hidden border bg-black/5 relative shadow-sm",
+										externalVideoEmbed.provider === "instagram" ? "max-w-[450px]" : "max-w-[800px]"
+									)}
+								>
+									<div className={cn("relative w-full", getEmbedAspectRatio())}>
 										<iframe
 											src={externalVideoEmbed.embedUrl}
 											title={issue.title}
-											className="absolute inset-0 h-full w-full"
+											className="absolute inset-0 h-full w-full border-0"
 											loading="lazy"
 											referrerPolicy="strict-origin-when-cross-origin"
 											allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
 											allowFullScreen
 										/>
 									</div>
-									<div className="px-3 py-2 text-xs text-muted-foreground">
-										Embedded from {externalVideoEmbed.provider}
+									<div className="px-4 py-2 text-[11px] text-muted-foreground bg-white/90 backdrop-blur-sm border-t flex items-center justify-between">
+										<span className="flex items-center gap-1.5 uppercase tracking-wide font-semibold text-[10px] text-blue-600">
+											<div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+											External Video
+										</span>
+										<span>Source: {externalVideoEmbed.provider}</span>
 									</div>
 								</div>
 							</div>
-						: issue.media_type === "video" && issue.video_url ?
+						) : issue.media_type === "video" && issue.video_url ? (
 							<div className="w-full flex justify-center mt-4">
 								<VideoPlayer
 									src={issue.video_url}
