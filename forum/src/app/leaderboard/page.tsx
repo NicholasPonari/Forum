@@ -98,8 +98,9 @@ export default function LeaderboardPage() {
 			})
 		);
 
-		// Already sorted by score from the query
-		setLeaderboard(leaderboardData);
+		// Filter out the bot user and already sorted by score from the query
+		const filteredLeaderboard = leaderboardData.filter(entry => entry.username !== "Vox.Vote");
+		setLeaderboard(filteredLeaderboard);
 		setLoading(false);
 	};
 
