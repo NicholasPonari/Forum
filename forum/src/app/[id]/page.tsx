@@ -769,14 +769,22 @@ export default function IssuePage() {
 										<iframe
 											src={externalVideoEmbed.embedUrl}
 											title={issue.title}
-											className="absolute inset-0 h-full w-full border-0"
+											className={cn(
+												"absolute inset-0 h-full w-full border-0",
+											)}
+											style={
+												externalVideoEmbed.provider === "instagram" ?
+													{ top: "-53px", height: "calc(100% + 300px)" }
+												:	undefined
+											}
 											loading="lazy"
+											scrolling="no"
 											referrerPolicy="strict-origin-when-cross-origin"
 											allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
 											allowFullScreen
 										/>
 									</div>
-									<div className="px-4 py-2 text-[11px] text-muted-foreground bg-white/90 backdrop-blur-sm border-t flex items-center justify-between">
+									<div className="px-4 py-2 text-[11px] text-muted-foreground bg-white/90 backdrop-blur-sm border-t flex items-center justify-between relative z-10">
 										<span className="flex items-center gap-1.5 uppercase tracking-wide font-semibold text-[10px] text-blue-600">
 											<div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
 											External Video

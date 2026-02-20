@@ -268,14 +268,22 @@ export function IssueCard({
 										<iframe
 											src={externalVideoEmbed.embedUrl}
 											title={issue.title}
-											className="absolute inset-0 h-full w-full border-0"
+											className={cn(
+												"absolute inset-0 h-full w-full border-0",
+											)}
+											style={
+												externalVideoEmbed.provider === "instagram" ?
+													{ top: "-53px", height: "calc(100% + 300px)" }
+												:	undefined
+											}
 											loading="lazy"
+											scrolling="no"
 											referrerPolicy="strict-origin-when-cross-origin"
 											allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
 											allowFullScreen
 										/>
 									</div>
-									<div className="px-3 py-1.5 text-[10px] text-muted-foreground bg-white/80 backdrop-blur-sm border-t flex items-center justify-between">
+									<div className="px-3 py-1.5 text-[10px] text-muted-foreground bg-white/80 backdrop-blur-sm border-t flex items-center justify-between relative z-10">
 										<span>Embedded from {externalVideoEmbed.provider}</span>
 										<div className="flex items-center gap-1.5">
 											<div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
