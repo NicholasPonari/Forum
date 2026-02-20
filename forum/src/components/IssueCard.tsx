@@ -255,22 +255,25 @@ export function IssueCard({
 				{(issue.image_url || issue.video_url || issue.external_video_url) && (
 					<div className="mb-3">
 						{issue.media_type === "external_video" && externalVideoEmbed ?
-							<div className="w-full flex justify-center">
+					<div className="w-full flex justify-center">
 								<div
 									className={cn(
-										"w-full rounded-lg overflow-hidden border bg-black/5 relative group",
+										"w-full rounded-4xl overflow-hidden border bg-black/5 relative group",
 										externalVideoEmbed.provider === "instagram" ?
 											"max-w-[400px]"
 										:	"max-w-full",
 									)}
 								>
-									<div className={cn("relative w-full", getEmbedAspectRatio())}>
+									<div
+										className={cn(
+											"relative w-full border-1 rounded-2xl overflow-hidden",
+											getEmbedAspectRatio(),
+										)}
+									>
 										<iframe
 											src={externalVideoEmbed.embedUrl}
 											title={issue.title}
-											className={cn(
-												"absolute inset-0 h-full w-full border-0",
-											)}
+											className={cn("absolute inset-0 h-full w-full")}
 											style={
 												externalVideoEmbed.provider === "instagram" ?
 													{ top: "-53px", height: "calc(100% + 300px)" }
@@ -283,7 +286,7 @@ export function IssueCard({
 											allowFullScreen
 										/>
 									</div>
-									<div className="px-3 py-1.5 text-[10px] text-muted-foreground bg-white/80 backdrop-blur-sm border-t flex items-center justify-between relative z-10">
+									<div className="px-3 py-1.5 text-[10px] text-muted-foreground bg-white/80 backdrop-blur-sm border-t flex items-center justify-between relative z-20">
 										<span>Embedded from {externalVideoEmbed.provider}</span>
 										<div className="flex items-center gap-1.5">
 											<div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
